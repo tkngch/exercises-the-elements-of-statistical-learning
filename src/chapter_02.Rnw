@@ -1,0 +1,402 @@
+\section*{Chapter 2. Overview of Supervised Learning}\label{sec:chapter_2_overview_of_supervised_learning}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 2.1}{%
+    Suppose each of $K$-classes has an associated target $t_k$, which is a vector of
+    all zeros, except a one in the $k$th position. Show that classifying to the largest
+    element of $\hat{y}$ amounts to choosing the closest target, $\min_{k} \Vert t_k -
+    \hat{y} \Vert$, if the elements of $\hat{y}$ sum to one.
+}
+
+To work on this exercise, I need to make the following assumptions:
+\begin{align*}
+    \hat{y} \in \R^{K}, \quad
+    \hat{y}_{i} \ge 0 \, \forall i, \quad
+    \sum_{i} \hat{y}_{i} = 1.
+\end{align*}
+Then,
+\begin{align*}
+    \arg\min_{k} \Vert t_k - \hat{y} \Vert
+    &= \arg\min_{k} \sum_{i} \left\lbrack t_{ki} - \hat{y}_{i} \right\rbrack^{2} \\
+    &= \arg\min_{k} \sum_{i} \left\lbrack t_{ki}^{2} + \hat{y}_{i}^{2} - 2 t_{ki} \hat{y}_{i} \right\rbrack \\
+    &= \arg\min_{k} \sum_{i} \left\lbrack - 2 t_{ki} \hat{y}_{i} \right\rbrack \\
+    &= \arg\max_{k} \sum_{i} \left\lbrack t_{ki} \hat{y}_{i} \right\rbrack \\
+    &= \arg\max_{k} \hat{y}_{k}
+\end{align*}
+because $t_k$ is a vector of all zeros, except a one in the $k$th position.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 2.2}{%
+    Show how to compute the Bayes decision boundary for the simulation example in Figure 2.5.
+}
+
+The boundary represents $x^{*}$ where
+\begin{align*}
+    \Pr(g = \texttt{blue} \vert X = x^{*}) &= \Pr(g = \texttt{orange} \vert X = x^{*}) \\
+    \Leftrightarrow
+    \Pr(g = \texttt{blue}) \Pr(X = x^{*} \vert g = \texttt{blue})
+    &= \Pr(g = \texttt{orange}) \Pr(X = x^{*} \vert g = \texttt{orange}) \\
+    \Leftrightarrow
+    \Pr(X = x^{*} \vert g = \texttt{blue})
+    &= \Pr(X = x^{*} \vert g = \texttt{orange}),
+\end{align*}
+assuming $\Pr(g = \texttt{blue}) = \Pr(g = \texttt{orange})$.
+
+Now from the description in pages 16--17, we know
+\begin{align*}
+    \Pr(X = x^{*}\vert g = \texttt{blue})
+    =
+    \mathcal{N}_{pdf}\left(
+        x^{*} \middle\vert
+        \mu,
+        \begin{bmatrix} 1/5 & 0 \\ 0 & 1/5 \end{bmatrix}\right),
+        \quad\textrm{and}\quad
+    \mu
+    =
+    \mathcal{N}_{pdf}\left(
+        \mu \middle\vert
+        \begin{bmatrix} 1 \\ 0 \end{bmatrix},
+        \begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix}\right).
+\end{align*}
+Similarly,
+\begin{align*}
+    \Pr(X = x^{*} \vert g = \texttt{orange})
+    =
+    \mathcal{N}_{pdf}\left(
+        x^{*} \middle\vert
+        \nu
+        \begin{bmatrix} 1/5 & 0 \\ 0 & 1/5 \end{bmatrix}\right),
+        \quad\textrm{and}\quad
+    \nu
+    =
+    \mathcal{N}_{pdf}\left(
+        \nu \middle\vert
+        \begin{bmatrix} 0 \\ 1 \end{bmatrix},
+        \begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix}\right).
+\end{align*}
+Then,
+\begin{align*}
+    &\Pr(X = x^{*} \vert g = \texttt{blue})
+        = \Pr(X = x^{*} \vert g = \texttt{orange})\\
+    &\Leftrightarrow
+    \int
+    \mathcal{N}_{pdf}\left(
+        x^{*} \middle\vert
+        \mu,
+        \begin{bmatrix} 1/5 & 0 \\ 0 & 1/5 \end{bmatrix}\right)
+    \mathcal{N}_{pdf}\left(
+        \mu \middle\vert
+        \begin{bmatrix} 1 \\ 0 \end{bmatrix},
+        \begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix}\right)
+    d_{\mu}\\
+    &\quad\quad =
+    \int
+    \mathcal{N}_{pdf}\left(
+        x^{*} \middle\vert
+        \nu,
+        \begin{bmatrix} 1/5 & 0 \\ 0 & 1/5 \end{bmatrix}\right)
+    \mathcal{N}_{pdf}\left(
+        \nu \middle\vert
+        \begin{bmatrix} 0 \\ 1 \end{bmatrix},
+        \begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix}\right)
+    d_{\nu}.
+\end{align*}
+The computation of the above integrals is intractable. Perhaps to circumvent the
+intractability, the authors assumed that $\mu$ and $\nu$ are known: 10 samples
+were drawn for $\mu$ and $\nu$, and these 20 samples are assumed equally likely.
+Then,
+\begin{align*}
+    \Pr(X = x^{*} \vert g = \texttt{blue})
+        = \Pr(X = x^{*} \vert g = \texttt{orange})
+\end{align*}
+is approximated as
+\begin{align*}
+    \sum_{i=1}^{10}
+    \mathcal{N}_{pdf}\left(
+        x^{*} \middle\vert
+        \mu^{(i)},
+        \begin{bmatrix} 1/5 & 0 \\ 0 & 1/5 \end{bmatrix}\right)
+     &=
+     \sum_{j=1}^{10}
+    \mathcal{N}_{pdf}\left(
+        x^{*} \middle\vert
+        \nu^{(j)},
+        \begin{bmatrix} 1/5 & 0 \\ 0 & 1/5 \end{bmatrix}\right)\\
+    \Leftrightarrow
+    \sum_{i=1}^{10} \left\Vert x^{*} - \mu^{(i)} \right\Vert
+    &= \sum_{j=1}^{10} \left\Vert x^{*} - \nu^{(j)} \right\Vert\\
+\end{align*}
+Here the $i$th sample of $\mu$ is denoted as $\mu^{(i)}$.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 2.6}{%
+    Consider a regression problem with inputs $x_{i}$ and outputs $y_{i}$, and a
+    parameterized model $f_{\theta}(x)$ to be fit by least squares. Show that if there
+    are observations with tied or identical values of $x$, then the fit can be obtained
+    from a reduced weighted least squares problem.
+}
+
+The squared loss function, $L$, is given by
+\begin{align*}
+    L = \sum_{i} {\left( y_{i} - f_{\theta}(x_{i}) \right)}^{2}.
+\end{align*}
+Now, let us assume $n$ observations with identical values of $x$: $x_{1} = x_{2} =
+\cdots = x_{n}$. Then,
+\begin{align*}
+    L &= \sum_{i=1}^{n} {\left( y_{i} - f_{\theta}(x_{i}) \right)}^{2}
+        + \sum_{i=n+1} {\left( y_{i} - f_{\theta}(x_{i}) \right)}^{2}\\
+      &= n {\left( \frac{1}{n} \sum_{i=1}^{n} y_{i} - f_{\theta}(x_{1}) \right)}^{2}
+        + c
+        + \sum_{i=n+1} {\left( y_{i} - f_{\theta}(x_{i}) \right)}^{2},
+\end{align*}
+where $c$ depends only on $y$ and independent of $f_{\theta}$. Thus, minimizing the
+least square is equivalent to minimizing the following:
+\begin{align*}
+    n {\left( \frac{1}{n} \sum_{i=1}^{n} y_{i} - f_{\theta}(x_{1}) \right)}^{2}
+    + \sum_{i=n+1} {\left( y_{i} - f_{\theta}(x_{i}) \right)}^{2}.
+\end{align*}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 2.7}{%
+
+    Suppose we have a sample of $N$ pairs $x_{i}$, $y_{i}$ drawn i.i.d.\ from the
+    distribution characterized as follows:
+    \begin{align*}
+        x_{i} &\sim h(x), \quad \textrm{the design density}\\
+        y_{i} &= f(x_{i}) + \epsilon_{i}, \quad \textrm{$f$ is the regression function}\\
+        \epsilon_{i} &\sim (0, \sigma^{2}). \quad \textrm{(mean zero, variance
+        $\sigma^{2}$)}
+    \end{align*}
+    We construct an estimator for $f$ linear in the $y_{i}$,
+    \begin{align*}
+        \hat{f}(x_{0}) = \sum_{i=1}^{N} l_{i}(x_{0}; \mathcal{X})y_{i},
+    \end{align*}
+    where the weights $l_{i}(x_{0}; \mathcal{X})$ do not depend on the $y_{i}$, but do
+    depend on the entire training sequence of $x_{i}$, denoted here by $\mathcal{X}$.
+
+    \vspace{1em}
+
+    (a) Show that linear regression and k-nearest-neighbour regression are members of
+    this class of estimators. Describe explicitly the weights $l_{i}(x_{0};
+    \mathcal{X})$ in each of these cases.
+
+    \vspace{1em}
+
+    (b) Decompose the conditional mean-squared error
+    \begin{align*}
+        E_{\mathcal{Y}\vert\mathcal{X}} {(f(x_{0}) - \hat{f}(x_{0}))}^{2}
+    \end{align*}
+    into a conditional squared bias and a conditional variance component. Like
+    $\mathcal{X}$, $\mathcal{Y}$ represents the entire training sequence of $y_{i}$.
+
+    \vspace{1em}
+
+    (c) Decompose the (unconditional) mean-squared error
+    \begin{align*}
+        E_{\mathcal{Y}, \mathcal{X}} {(f(x_{0}) - \hat{f}(x_{0}))}^{2}
+    \end{align*}
+    into a squared bias and a variance component.
+
+}
+
+First, I clarify the notations.
+\begin{align*}
+    x_{i} \in \R^{p} \quad y_{i} \in \R^{p} \quad X \in \R^{N \times p}
+\end{align*}
+
+\noindent\textbf{(a)}
+
+The linear regression is given by $\hat{f}(x_{0}) = x_{0} \beta$, where $\beta = {(X^{T}
+X)}^{-1} X^{T} y$. Then,
+\begin{align*}
+    \hat{f}(x_{0}) = x_{0} {(X^{T} X)}^{-1} X^{T} y
+    = \sum_{i=1}^{N} x_{0} {(X^{T} X)}^{-1} x_{i} y_{i}
+\end{align*}
+Thus, $l_{i}(x_{0}; \mathcal{X}) = x_{0} {(X^{T} X)}^{-1} x_{i}$.
+
+For the k-nearest-neighbour,
+\begin{align*}
+    l_{i}(x_{0}; \mathcal{X}) =
+\begin{cases}
+    \frac{1}{k} & \mbox{if $x_{i}$ is among the k nearest observation to $x_{0}$} \\
+    0 & \mbox{otherwise}.
+\end{cases}
+\end{align*}
+
+\noindent\textbf{(b)}
+
+Note $E_{\mathcal{Y}\vert\mathcal{X}} \lbrack f(x_{0}) \rbrack = f(x_{0})$. Then we have
+the following:
+\begin{align*}
+    &E_{\mathcal{Y}\vert\mathcal{X}} {(f(x_{0}) - \hat{f}(x_{0}))}^{2}\\
+    &= E_{\mathcal{Y}\vert\mathcal{X}}
+        \left\lbrack
+            {f(x_{0})}^{2} + {\hat{f}(x_{0})}^{2} - 2 {f(x_{0}) \hat{f}(x_{0})}
+        \right\rbrack\\
+    &=
+    {f(x_{0})}^{2}
+    + E_{\mathcal{Y}\vert\mathcal{X}}
+        \left\lbrack
+            {\hat{f}(x_{0})}^{2}
+        \right\rbrack
+    - 2 f(x_{0})
+    E_{\mathcal{Y}\vert\mathcal{X}}
+        \left\lbrack
+            \hat{f}(x_{0})
+        \right\rbrack\\
+    &=
+    {\left\lbrack
+        f(x_{0})
+        - E_{\mathcal{Y}\vert\mathcal{X}} \left\lbrack \hat{f}(x_{0}) \right\rbrack
+    \right\rbrack}^{2}
+    - E_{\mathcal{Y}\vert\mathcal{X}}
+        {\left\lbrack \hat{f}(x_{0}) \right\rbrack}^{2}
+    + E_{\mathcal{Y}\vert\mathcal{X}}
+        \left\lbrack {\hat{f}(x_{0})}^{2} \right\rbrack\\
+    &=
+    {\left\lbrack
+        f(x_{0})
+        - E_{\mathcal{Y}\vert\mathcal{X}} \left\lbrack \hat{f}(x_{0}) \right\rbrack
+    \right\rbrack}^{2}
+    + E_{\mathcal{Y}\vert\mathcal{X}}
+        \left\lbrack {\hat{f}(x_{0})}^{2} \right\rbrack
+    - 2 E_{\mathcal{Y}\vert\mathcal{X}}
+        {\left\lbrack \hat{f}(x_{0}) \right\rbrack}
+        E_{\mathcal{Y}\vert\mathcal{X}}
+        {\left\lbrack \hat{f}(x_{0}) \right\rbrack}
+    + E_{\mathcal{Y}\vert\mathcal{X}}
+        {\left\lbrack \hat{f}(x_{0}) \right\rbrack}^{2}
+    \\
+    &=
+    {\left\lbrack
+        f(x_{0})
+        - E_{\mathcal{Y}\vert\mathcal{X}} \left\lbrack \hat{f}(x_{0}) \right\rbrack
+    \right\rbrack}^{2}
+    + E_{\mathcal{Y}\vert\mathcal{X}}
+    \left\lbrack
+        {\hat{f}(x_{0})}^{2}
+    - 2 \hat{f}(x_{0})
+        E_{\mathcal{Y}\vert\mathcal{X}}
+        {\left\lbrack \hat{f}(x_{0}) \right\rbrack}
+    + E_{\mathcal{Y}\vert\mathcal{X}}
+        {\left\lbrack \hat{f}(x_{0}) \right\rbrack}^{2}
+    \right\rbrack
+    \\
+    &=
+    {\left\lbrack
+        f(x_{0})
+        - E_{\mathcal{Y}\vert\mathcal{X}} \left\lbrack \hat{f}(x_{0}) \right\rbrack
+    \right\rbrack}^{2}
+    + E_{\mathcal{Y}\vert\mathcal{X}} {\left\lbrack
+    {\left(
+        \hat{f}(x_{0})
+        - E_{\mathcal{Y}\vert\mathcal{X}}
+        \left\lbrack \hat{f}(x_{0}) \right\rbrack
+\right)}^{2}
+    \right\rbrack}
+    \\
+    &= \mbox{Bias}^{2} + \mbox{Variance}.
+\end{align*}
+
+\noindent\textbf{(c)}
+
+Note $E_{\mathcal{Y}, \mathcal{X}} \lbrack f(x_{0}) \rbrack = f(x_{0})$. Then the
+derivation is basically the same as the one in above (b).
+\begin{align*}
+    &E_{\mathcal{Y}, \mathcal{X}} {(f(x_{0}) - \hat{f}(x_{0}))}^{2}\\
+    &= E_{\mathcal{Y}, \mathcal{X}}
+        \left\lbrack
+            {f(x_{0})}^{2} + {\hat{f}(x_{0})}^{2} - 2 {f(x_{0}) \hat{f}(x_{0})}
+        \right\rbrack\\
+    &=
+    {f(x_{0})}^{2}
+    + E_{\mathcal{Y}, \mathcal{X}}
+        \left\lbrack
+            {\hat{f}(x_{0})}^{2}
+        \right\rbrack
+    - 2 f(x_{0})
+    E_{\mathcal{Y}, \mathcal{X}}
+        \left\lbrack
+            \hat{f}(x_{0})
+        \right\rbrack\\
+    &= \dots \\
+    &=
+    {\left\lbrack
+        f(x_{0})
+        - E_{\mathcal{Y}, \mathcal{X}} \left\lbrack \hat{f}(x_{0}) \right\rbrack
+    \right\rbrack}^{2}
+    + E_{\mathcal{Y}, \mathcal{X}} {\left\lbrack
+    {\left(
+        \hat{f}(x_{0})
+        - E_{\mathcal{Y}, \mathcal{X}}
+        \left\lbrack \hat{f}(x_{0}) \right\rbrack
+    \right)}^{2} \right\rbrack}
+    \\
+    &= \mbox{Bias}^{2} + \mbox{Variance}.
+\end{align*}
+
+\exercise{Ex. 2.9}{%
+
+    Consider a linear regression model with $p$ parameters, fit by least squares to a
+    set of training data $(x_{1}, y_{1}), \dots, (x_{N}, y_{N})$ drawn at random from a
+    population. Let $\beta$ be the least squares estimate. Suppose we have some test
+    data $(\tilde{x}_{1}, \tilde{y}_{1}), \dots, (\tilde{x}_{M}, \tilde{y}_{M})$ drawn
+    at random from the same population as the training data. If $R_{tr}(\beta) =
+    \frac{1}{N} \sum_{i=1}^{N} (y_{i} - x_{i} \beta)^{2}$ and $R_{te}(\beta) =
+    \frac{1}{M} \sum_{i=1}^{M} (\tilde{y}_{i} - \tilde{x}_{i} \beta)^{2}$, prove that
+    \begin{align*}
+        E\left\lbrack R_{tr}(\hat{\beta}) \right\rbrack
+        \leq E\left\lbrack R_{te}(\hat{\beta}) \right\rbrack
+    \end{align*}
+    where the expectations are over all that is random in each expression.
+}
+
+From the description, we know
+\begin{align*}
+    \hat{\beta} = \arg\min_{\beta}
+    \left\lbrack
+        \frac{1}{N} \sum_{i=1}^{N} (y_{i} - x_{i} \beta)^{2}
+    \right\rbrack \quad \mbox{and} \quad
+    R_{tr}(\hat{\beta}) = \min_{\beta} R_{tr}(\beta).
+\end{align*}
+Now, let $\tilde{\beta}$ be the least square estimate on the $N$ test data.
+\begin{align*}
+    \tilde{\beta} = \arg\min_{\beta}
+    \left\lbrack
+        \frac{1}{N} \sum_{i=1}^{N} (\tilde{y}_{i} - \tilde{x}_{i} \beta)^{2}
+    \right\rbrack \quad \mbox{and} \quad
+    R_{te}(\tilde{\beta}) = \min_{\beta} R_{te}(\beta).
+\end{align*}
+Then given that $(x_{i}, y_{i})$ and $(\tilde{x}_{i}, \tilde{y}_{i})$ are from the same
+distribution, we have
+\begin{align*}
+    E\left\lbrack R_{tr}(\hat{\beta}) \right\rbrack
+    =
+    E\left\lbrack
+    \frac{1}{N} \sum_{i=1}^{N} (y_{i} - x_{i} \hat{\beta})^{2}
+    \right\rbrack
+    =
+    E\left\lbrack
+    \frac{1}{N} \sum_{i=1}^{N} (\tilde{y}_{i} - \tilde{x}_{i} \tilde{\beta})^{2}
+    \right\rbrack
+\end{align*}
+Here I note that the right-most term is independent of $N$:
+\begin{align*}
+    E\left\lbrack
+        \frac{1}{N} \sum_{i=1}^{N} (\tilde{y}_{i} - \tilde{x}_{i} \beta)^{2}
+    \right\rbrack
+    = E\left\lbrack
+        (\tilde{y}_{1} - \tilde{x}_{1} \beta)^{2}
+    \right\rbrack
+    = E\left\lbrack
+        \frac{1}{M} \sum_{i=1}^{M} (\tilde{y}_{i} - \tilde{x}_{i} \beta)^{2}
+    \right\rbrack
+    = E\left\lbrack R_{te}(\beta) \right\rbrack.
+\end{align*}
+Then we have
+\begin{align*}
+    E\left\lbrack R_{tr}(\hat{\beta}) \right\rbrack
+    = E\left\lbrack R_{te}(\tilde{\beta}) \right\rbrack
+    \leq E\left\lbrack R_{te}(\hat{\beta}) \right\rbrack.
+\end{align*}
+The equality holds when $\hat{\beta} = \tilde{\beta}$.

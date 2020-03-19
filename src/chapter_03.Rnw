@@ -1,0 +1,1475 @@
+\section*{Chapter 3. Linear Methods for Regression}\label{sec:chapter_3_linear_methods_for_regression}
+\setcounter{table}{0}
+\renewcommand{\thetable}{C3.\arabic{table}}
+\setcounter{equation}{0}
+\renewcommand{\theequation}{C3.\arabic{equation}}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \exercise{Ex. 3.1}{%
+%     Show that the $F$ statistic (3.13) for dropping a single coefficient from a model is
+%     equal to the square of the corresponding $z$-score (3.12).
+% }
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 3.2}{%
+
+    Given data on two variables $X$ and $Y$, consider fitting a cubic polynomial
+    regression model $f(X) = \sum_{j=0}^{3} \beta_{j} X^{j}$. In addition to plotting
+    the fitted curve, you would like a 95\% confidence band about the curve. Consider
+    the following two approaches.
+
+    \begin{enumerate}
+
+        \item At each point $x_{0}$, form a 95\% confidence interval for the linear
+            function $\alpha^{T} \beta = \sum_{j=0}^{3} \beta_{j} x_{0}^{j}$.
+
+        \item Form a 95\% confidence set for $\beta$ as in (3.15), which in turn
+            generates confidence intervals for $f(x_{0})$.
+
+    \end{enumerate}
+
+    How do these approaches differ? Which band is likely to be wider? Conduct a small
+    simulation experiment to compare the two methods.
+}
+
+<<3_2a, echo=FALSE>>=
+set.seed(1234567)
+n <- 100
+beta <- matrix(c(-1, 2, 1, 3))
+@
+
+First, I set $n = \Sexpr{n}$ and $\beta = \lbrack \Sexpr{beta} \rbrack^{T}$. Then $x$
+and $y$ are randomly generated as below.
+<<3_2b, echo=FALSE>>=
+x0grid <- seq(-1, 1, length.out=n)
+X <- matrix(c(x0grid^0, x0grid, x0grid^2, x0grid^3), nrow=n, byrow=FALSE)
+p <- ncol(X)
+y <- X %*% beta + rnorm(n, sd=2)
+@
+
+<<3_2c, echo=FALSE>>=
+beta_hat <- solve(t(X) %*% X) %*% t(X) %*% y
+y_hat <- X %*% beta_hat
+@
+
+\noindent\textbf{Approach 1.}
+
+We would like to estimate the variance of prediction, $Var\left(\sum_{j=0}^{3}
+\hat{\beta}_{j} x_{0}^{j} \right)$. For convenience, let ${X_{0}} = \lbrack 1, x_{0},
+x_{0}^{2}, x_{0}^{3} \rbrack$. Then,
+
+\begin{align*}
+    Var\left(\sum_{j=0}^{3} \hat{\beta}_{j} x_{0}^{j} \right)
+    &= Var\left({X_{0}} \, {\hat{\beta}} \right) \\
+    &= {X_{0}} \, {\hat{\beta}} \, {\hat{\beta}}^{T} \, {X_{0}}^{T} \\
+    &= {X_{0}} \, ((X^{T} X)^{-1} X^{T} y) \, ((X^{T} X)^{-1} X^{T} y)^{T} \, {X_{0}}^{T} \\
+    &= y y^{T} \, {X_{0}} \, (X^{T} X)^{-1} \, {X_{0}}^{T}
+\end{align*}
+where $y y^{T} = \sigma^{2}$ can be estimated with the equation immediately after
+equation (3.8) in page 47.
+
+<<3_2_1, echo=FALSE>>=
+sigma2_hat <- (1/(n-p-1)) * t(y - y_hat) %*% (y - y_hat)
+nu <- solve(t(X) %*% X)
+
+calculate_pred <- function(x0) {
+    X0 <- matrix(c(1, x0, x0^2, x0^3), nrow=1)
+    X0 %*% beta_hat
+}
+calculate_var <- function(x0) {
+    X0 <- matrix(c(1, x0, x0^2, x0^3), nrow=1)
+    sigma2_hat * X0 %*% nu %*% t(X0)
+}
+
+approach1 <- data.frame(x = x0grid, y_hat = sapply(x0grid, calculate_pred),
+                         y.var = sapply(x0grid, calculate_var))
+approach1$y.lower <- approach1$y_hat + qnorm(0.025) * sqrt(approach1$y.var)
+approach1$y.upper <- approach1$y_hat + qnorm(0.975) * sqrt(approach1$y.var)
+@
+
+<<3_2_2, echo=FALSE>>=
+cov.matrix <- solve(t(X) %*% X) * sigma2_hat[1, 1]
+
+sample_confidence_set <- function(i) {
+    criteria <- 1
+    while (criteria > 0) {
+        beta_tilde <- t(rmvnorm(1, mean=beta_hat, sigma=cov.matrix))
+        lhs <- t(beta_hat - beta_tilde) %*% t(X) %*% X %*% (beta_hat - beta_tilde)
+        rhs <- sigma2_hat * qchisq(0.95, df=5)
+        criteria <- lhs - rhs
+    }
+    return(beta_tilde)
+}
+n_samples <- 100
+confidence_set <- sapply(1:n_samples, sample_confidence_set)
+get_bounds <- function(x0) {
+    X0 <- matrix(c(1, x0, x0^2, x0^3), nrow=1)
+    y_tilde <- X0 %*% confidence_set
+    data.frame(y_lower=min(y_tilde), y_upper=max(y_tilde))
+}
+tmp <- lapply(x0grid, function(x0) {get_bounds(x0)})
+approach2 <- base::do.call("rbind", tmp)
+approach2$x <- x0grid
+approach2$y_hat <- approach1$y_hat
+@
+
+\vspace{1em}
+\noindent\textbf{Approach 2.}
+
+We would like to form the confidence set for $\beta$. This is achieved by first drawing
+$\Sexpr{n_samples}$ samples from the multivariate normal distribution:
+\begin{align*}
+    \tilde{\beta} \sim \mathcal{N}\left(\hat{\beta},\, (X^{T} X)^{-1} \hat{\sigma}^{2}\right)
+\end{align*}
+(equation 3.10) and then retaining the samples which satisfy
+\begin{align*}
+    (\hat{\beta} - \tilde{\beta})^{T} X^{T} X (\hat{\beta} - \tilde{\beta}) \leq \hat{\sigma}^{2}
+    \chi_{5}^{2(1-0.05)}
+\end{align*}
+(equation 3.15), where $\chi_{5}^{2(1-0.05)} = 11.1$. The $\Sexpr{n_samples} \,
+\tilde{\beta}s$ are organized into a $\Sexpr{p} \times \Sexpr{n_samples}$ matrix,
+$\bar{\beta}$. Then for each $x_{0}$, I took the maximum and minimum of $X_{0}
+\bar{\beta}$ as the upper and lower bounds. The results are summarized in
+Figure~\ref{fig:3_2}.
+
+<<3_2e, echo=FALSE>>=
+approach1$approach <- "Approach 1"
+approach2$approach <- "Approach 2"
+data <- data.frame(approach=c(approach1$approach, approach2$approach),
+                   x=c(approach1$x, approach2$x),
+                   y=c(y, y),
+                   y_hat=c(approach1$y_hat, approach2$y_hat),
+                   y.lower=c(approach1$y_lower, approach2$y_lower),
+                   y.upper=c(approach1$y_upper, approach2$y_upper))
+@
+
+\begin{figure}[h!]
+    \centering
+<<3_2f, echo=FALSE, fig.width=5, fig.height=2.2>>=
+plot <- ggplot(data, aes(x=x, y=y)) +
+    facet_wrap(~ approach) +
+    geom_point(aes(x=x, y=y), size=0.5, color="blue") +
+    geom_ribbon(aes(x=x, ymin=y.lower, ymax=y.upper), fill="black", alpha=0.4) +
+    geom_line(aes(x=x, y=y_hat), size=0.5, color="black") +
+    scale_x_continuous(name="x", limits=c(min(x0grid), max(x0grid))) +
+    scale_y_continuous(name="y", limits=c(min(y), max(y)))
+print(plot)
+@
+    \caption{Results for Ex.3.2. The black solid line represents $\hat{y}$, the shaded area
+    represents 95\% confidence interval, and the blue dots represents data.}
+    \label{fig:3_2}
+\end{figure}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \exercise{Ex. 3.3}{%
+%     Gauss-Markov theorem:
+%
+%     (a) Prove the Gauss-Markov theorem: the least squares estimate of a parameter $a^{T}
+%     \beta$ has variance no bigger than that of any other linear unbiased estimate of
+%     $a^{T} \beta$ (Section 3.2.2).
+%
+%     \vspace{1em}
+%
+%     (b) The matrix inequality $B \preceq A$ holds if $A - B$ is positive semidefinite.
+%     Show that if $\hat{V}$ is the variance-covariance matrix of the least squares
+%     estimate of $\beta$ and $\tilde{V}$ is the variance-covariance matrix of any other
+%     linear unbiased estimate, then $\hat{V} \preceq \tilde{V}$.
+%
+% }
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \exercise{Ex. 3.4}{%
+%
+%     Show how the vector of least squares coefficients can be obtained from a single pass
+%     of the Gram-Schmidt procedure (Algorithm 3.1). Represent your solution in terms of
+%     the $QR$ decomposition of $X$.
+%
+% }
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 3.5}{%
+
+    Consider the ridge regression problem (3.41). Show that this problem is equivalent
+    to the problem
+    \begin{align*}
+        \hat{\beta}^{c} = \arg \min_{\beta^{c}} \left\{
+            \sum_{i=1}^{N} \left\lbrack
+                y_{i} - \beta_{0}^{c} - \sum_{j=1}^{p} (x_{ij} - \bar{x}_{j}) \beta_{j}^{c}
+            \right\rbrack^{2} +
+            \lambda \sum_{j=1}^{p} \beta_{j}^{c2}
+        \right\}
+    \end{align*}
+    Give the correspondence between $\beta^{c}$ and the original $\beta$ in (3.41).
+    Characterize the solution to this modified criterion. Show that a similar result
+    holds for the lasso.
+
+}
+
+Equation (3.41) is
+\begin{align*}
+    \hat{\beta}^{\textrm{ridge}} = \arg \min_{\beta} \left\{
+        \sum_{i=1}^{N} \left(y_{i} - \beta_{0} - \sum_{j=1}^{p} x_{ij} \beta_{j} \right)^{2} +
+        \lambda \sum_{j=1}^{p} \beta_{j}^{2}
+        \right\}
+\end{align*}
+and
+\begin{align*}
+    \hat{\beta}^{c} = \arg \min_{\beta^{c}} \left\{
+        \sum_{i=1}^{N} \left\lbrack
+            y_{i} - \beta_{0}^{c} + \sum_{j=1}^{p} \bar{x}_{j} \beta_{j}^{c} - \sum_{j=1}^{p} x_{ij} \beta_{j}^{c}
+        \right\rbrack^{2} +
+        \lambda \sum_{j=1}^{p} \beta_{j}^{c2}
+    \right\}
+\end{align*}
+These two equations are equivalent, when
+\begin{align*}
+    \beta_{0} = \beta_{0}^{c} - \sum_{j=1}^{p} \bar{x}_{j} \beta_{j}^{c}
+    \quad \textrm{and} \quad
+    \beta_{j} = \beta_{j}^{c}
+\end{align*}
+
+For the lasso, Equation (3.52) shows
+\begin{align*}
+    \hat{\beta}^{\textrm{lasso}} &= \arg \min_{\beta} \left\{
+        \frac{1}{2}
+        \sum_{i=1}^{N} \left(y_{i} - \beta_{0} - \sum_{j=1}^{p} x_{ij} \beta_{j} \right)^{2} +
+        \lambda \sum_{j=1}^{p} \vert \beta_{j} \vert
+        \right\}\\
+    &= \arg \min_{\beta} \left\{
+        \frac{1}{2}
+        \sum_{i=1}^{N} \left(y_{i} - \beta_{0} - \sum_{j=1}^{p} \bar{x_{j}} \beta_{j} -
+\sum_{j=1}^{p} (x_{ij} - \bar{x_{j}}) \beta_{j} \right)^{2} +
+        \lambda \sum_{j=1}^{p} \vert \beta_{j} \vert
+        \right\}\\
+\end{align*}
+which is equivalent to
+\begin{align*}
+    \hat{\beta}^{\textrm{lasso}} = \arg \min_{\beta} \left\{
+        \frac{1}{2}
+        \sum_{i=1}^{N} \left(y_{i} - \beta_{0}^{c} - \sum_{j=1}^{p} x_{ij} \beta_{j} \right)^{2} +
+        \lambda \sum_{j=1}^{p} \vert \beta_{j} \vert
+        \right\}
+\end{align*}
+when
+\begin{align*}
+    \beta_{0} = \beta_{0}^{c} - \sum_{j=1}^{p} \bar{x}_{j} \beta_{j}.
+\end{align*}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 3.6}{%
+
+    Show that the ridge regression estimate is the mean (and mode) of the posterior
+    distribution, under a Gaussian prior $\beta \sim N(0, \tau I)$, and Gaussian
+    sampling model $y \sim N(X\beta, \sigma^{2} I)$. Find the relationship between the
+    regularization parameter $\lambda$ in the ridge formula, and the variances $\tau$
+    and $\sigma^{2}$.
+
+}
+
+The posterior probability is given by
+\begin{align*}
+    \Pr(\beta \vert y, X) &\propto \Pr(\beta) \, \Pr(y \vert \beta, X)
+    = \mathcal{N}_{pdf}(\beta \vert 0, \tau I) \, \mathcal{N}_{pdf}(y \vert X \beta, \sigma^{2} I) \\
+    &\propto
+        \exp\left\{
+            -\frac{\beta^{T} (\tau^{-1} I) \beta + (y - X\beta)^{T} (\sigma^{-2} I) (y - X \beta)}{2}
+        \right\}
+\end{align*}
+The mode of this posterior is
+\begin{align*}
+    \hat{\beta}
+    &= \arg \max_{\beta}
+        \exp\left\{
+            -\frac{\beta^{T} (\tau^{-1} I) \beta + (y - X\beta)^{T} (\sigma^{-2} I) (y - X \beta)}{2}
+        \right\}
+    \\
+    &= \arg \min_{\beta} \left\lbrack
+        \beta^{T} (\tau^{-1} I) \beta + (y - X\beta)^{T} (\sigma^{-2} I) (y - X \beta)
+        \right\rbrack
+    \\
+    &= \arg \min_{\beta} \left\lbrack
+        \tau^{-1} \sum_{j=1}^{p} \beta_{j}^{2} + \sigma^{-2} \sum_{i=1}^{N} (y_{i} - X_{i\cdot} \beta)^{2}
+        \right\rbrack
+    \\
+    &= \arg \min_{\beta} \left\lbrack
+        \sum_{i=1}^{N} (y_{i} - X_{i\cdot} \beta)^{2}
+        +
+        \frac{\sigma^{2}}{\tau} \sum_{j=1}^{p} \beta_{j}^{2}
+        \right\rbrack
+\end{align*}
+Then, the regularization parameter $\lambda = \frac{\sigma^{2}}{\tau}$.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 3.7}{%
+
+    Assume $y_{i} \sim N(\beta_{0} + x_{i}^{T} \beta, \sigma^{2})$, $i = 1, 2, \dots,
+    N$, and the parameters $\beta_{j}$, $j = 1, \dots, p$ are each distributed as $N(0,
+    \tau^{2})$, independently of one another. Assuming $\sigma^{2}$ and $\tau^{2}$ are
+    known, and $\beta_{0}$ is not governed by a prior (or has a flat improper prior),
+    show that the (minus) log-posterior density of $\beta$ is proportional to
+    $\sum_{i=1}^{N} (y_{i} - \beta_{0} - \sum_{j} x_{ij} \beta_{j})^{2} + \lambda
+    \sum_{j=1}^{p} \beta_{j}^{2}$ where $\lambda = \sigma^{2} / \tau^{2}$.
+
+}
+
+The likelihood is given by
+\begin{align*}
+    \log \Pr(y \vert \beta, X)
+    &=
+        - \log \left(\sigma \sqrt{2 \pi} \right)
+        - \frac{\sum_{i=1}^{N} (y_{i} - \beta_{0} - \sum_{j} x_{ij} \beta_{j})^{2}
+        }{2\sigma^{2}}.
+\end{align*}
+The log-prior density of $\beta$ is
+\begin{align*}
+    \log \Pr(\beta)
+    &= \sum_{j=1}^{p} \log \Pr(\beta_{j})
+    = \sum_{j=1}^{p} \log \left\lbrack
+    \frac{1}{\tau \sqrt{2 \pi}} e^{-\frac{\beta_{j}^{2}}{2\tau^{2}}}
+    \right\rbrack
+    = \sum_{j=1}^{p} \left\lbrack
+        - \log \left(\tau \sqrt{2 \pi} \right)
+        - \frac{\beta_{j}^{2}}{2\tau^{2}}
+    \right\rbrack.
+\end{align*}
+Assuming the improper flat prior, $\Pr(\beta_{0}) = c$, $\Pr(\beta_{0})$ just contribute
+the constant to the log-posterior density. The negative log-posterior density of $\beta$
+is
+\begin{align*}
+    &- \log \Pr(\beta \vert y, X)\\
+    &= - \log \Pr(y \vert \beta, X) - \log \Pr(\beta) - \log \Pr(\beta_{0})\\
+    &= \frac{\sum_{i=1}^{N} (y_{i} - \beta_{0} - \sum_{j} x_{ij} \beta_{j})^{2}
+        }{2\sigma^{2}}
+        + \sum_{j=1}^{p} \left\lbrack \frac{\beta_{j}^{2}}{2\tau^{2}} \right\rbrack
+        + \log \left(\sigma \sqrt{2 \pi} \right)
+        + \sum_{j=1}^{p} \left\lbrack - \log \left(\tau \sqrt{2 \pi} \right)
+        \right\rbrack
+        - \log c\\
+    &\propto
+        \frac{\sum_{i=1}^{N} (y_{i} - \beta_{0} - \sum_{j} x_{ij} \beta_{j})^{2}
+        }{2\sigma^{2}}
+        + \frac{1}{2\tau^{2}} \sum_{j=1}^{p} \beta_{j}^{2}\\
+    &\propto
+        \frac{\sum_{i=1}^{N} (y_{i} - \beta_{0} - \sum_{j} x_{ij} \beta_{j})^{2}
+            + \frac{\sigma^{2}}{\tau^{2}} \sum_{j=1}^{p} \beta_{j}^{2}
+        }{2\sigma^{2}}\\
+    &\propto
+        \sum_{i=1}^{N} (y_{i} - \beta_{0} - \sum_{j} x_{ij} \beta_{j})^{2}
+            + \frac{\sigma^{2}}{\tau^{2}} \sum_{j=1}^{p} \beta_{j}^{2}.
+\end{align*}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \exercise{Ex. 3.8}{%
+%
+%     Consider the QR decomposition of the uncentered $N \times (p + 1)$ matrix $X$ (whose
+%     first column is all ones), and the SVD of the $N \times p$ centered matrix
+%     $\tilde{X}$. Show that $Q_{2}$ and $U$ span the same subspace, where $Q_{2}$ is the
+%     sub-matrix of $Q$ with the first column removed. Under what circumstances will they
+%     be the same, up to sign flips?
+%
+% }
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \exercise{Ex. 3.9}{%
+%
+%     \textit{Forward stepwise regression.} Suppose we have the QR decomposition for the
+%     $N \times q$ matrix $X_{1}$ in a multiple regression problem with response $y$, and
+%     we have an additional $p - q$ predictors in the matrix $X_{2}$. Denote the current
+%     residual by $r$. We wish to establish which one of these additional variables will
+%     reduce the residual-sum-of squares the most when included with those in $X_{1}$.
+%     Describe an efficient procedure for doing this.
+%
+% }
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 3.10}{%
+
+    \textit{Backward stepwise regression.} Suppose we have the multiple regression fit
+    of $y$ on $X$, along with the standard errors and Z-scores as in Table 3.2. We wish
+    to establish which variable, when dropped, will increase the residual sum-of-squares
+    the least. How would you do this?
+
+}
+
+Let $RSS_{\bar{j}} - RSS$ denote the increase in the residual sum-of-squares after
+dropping $x_{j}$ from the model. Then, we wish to find
+\begin{align*}
+    j &= \arg\min_{j} RSS_{\bar{j}} - RSS\\
+      &= \arg\min_{j} \frac{RSS_{\bar{j}} - RSS}{RSS / (N - p - 1)},
+\end{align*}
+where $N$ and $p$ are the number of rows and the number of columns in $X$. Thus, the
+variable to drop will have the minimum F static. From Ex.\ 3.1, this F score is the
+square of the corresponding $z$-score. Therefore, I would look for a coefficient with
+the smallest absolute $z$-score.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 3.11}{%
+
+    Show that the solution to the multivariate linear regression problem (3.40) is given
+    by (3.39).  What happens if the covariance matrices $\Sigma_{i}$ are different for
+    each observation?
+
+}
+
+The equation (3.40) gives us the multivariate weighted criterion:
+\begin{align*}
+    \textrm{RSS}(B; \Sigma) = \sum_{i=1}^{N} (y_{i} - f(x_{i}))^{T} \Sigma^{-1} (y_{i} - f(x_{i}))
+\end{align*}
+First, let me clarify the notation.
+\begin{alignat*}{3}
+    Y &\in \R^{N\times K} \quad\quad&&\mbox{Matrix of outputs}\\
+    X &\in \R^{N\times p+1} &&\mbox{Matrix of inputs}\\
+    \Sigma &\in \R^{p+1\times p+1} &&\mbox{Covariance matrix}\\
+    B &\in \R^{p+1\times K} &&\mbox{Matrix of parameters}
+\end{alignat*}
+Now, in Equation (3.40), $y_{i}$ is the $i$th row of $Y$, transposed to be in $\R^{K\times
+1}$, and similarly, $x_{i}$ is the $i$th row of $X$, transposed to be in $\R^{p+1\times
+1}$. Then, $f(x_{i}) \in \R^{K\times 1}$.
+
+With the above notation, I calculate the residual sum of squares for the multivariate
+linear regression problem, where $f(x_{i}) = B^{T} x_{i}$. Thus
+\begin{align*}
+    \textrm{RSS}(B; \Sigma)
+    &= \sum_{i=1}^{N} (y_{i} - B^{T} x_{i})^{T} \Sigma^{-1} (y_{i} - B^{T} x_{i})\\
+    &= \tr( (Y^{T} - B^{T} X^{T})^{T} \Sigma^{-1} (Y^{T} - B^{T} X^{T}) ) \\
+    &= \tr( (Y - X B) \Sigma^{-1} (Y^{T} - B^{T} X^{T}) ) \\
+    &= \tr(
+    Y \Sigma^{-1} Y^{T}
+    - Y\Sigma^{-1} B^{T} X^{T}
+    - X B \Sigma^{-1} Y^{T}
+    + X B \Sigma^{-1} B^{T} X^{T}
+    )\\
+    &=
+    \tr(Y \Sigma^{-1} Y^{T})
+    - 2 \tr(X B \Sigma^{-1} Y^{T})
+    + \tr(X B \Sigma^{-1} B^{T} X^{T})
+\end{align*}
+Please note that here
+\begin{align*}
+    \tr(Y \Sigma^{-1} B^{T}X^{T}) =
+    \tr((Y \Sigma^{-1} B^{T}X^{T})^{T}) =
+    \tr(XB \Sigma^{-1} Y^{T}).
+\end{align*}
+Now, I take the derivative of $\textrm{RSS}(B; \Sigma)$ with respect to $B$, noting that
+\begin{align*}
+    \frac{d\tr(AXB)}{dX} = BA.
+\end{align*}
+Setting the derivative to zero, I obtain the following:
+\begin{align*}
+    \frac{\textrm{RSS}(dB; \Sigma)}{dB} = 0
+    \quad&\Leftrightarrow\quad
+    -2 (\Sigma^{-1} Y^{T} X) + (\Sigma^{-1} B^{T} X^{T} X) + (X^{T} X B \Sigma^{-1})^{T} = 0\\
+    &\Leftrightarrow\quad
+        \Sigma^{-1} B^{T} X^{T} X = \Sigma^{-1} Y^{T} X \\
+    &\Leftrightarrow\quad
+        B^{T} X^{T} X = Y^{T} X \\
+    &\Leftrightarrow\quad
+        B^{T} = Y^{T} X (X^{T} X)^{-1} \\
+    &\Leftrightarrow\quad
+        B = (X^{T} X)^{-1} X^{T} Y,
+\end{align*}
+which is Equation (3.39).
+
+The above derivation is not applicable when the covariance matrices are different for
+each observation
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 3.12}{%
+
+    Show that the ridge regression estimates can be obtained by ordinary least squares
+    regression on an augmented data set. We augment the centered matrix $X$ with $p$
+    additional rows $\sqrt{\lambda}I$, and augment $y$ with $p$ zeros. By introducing
+    artificial data having response value zero, the fitting procedure is forced to
+    shrink the coefficients toward zero.  This is related to the idea of hints due to
+    Abu-Mostafa (1995), where model constraints are implemented by adding artificial
+    data examples that satisfy them.
+
+}
+
+We let
+\begin{align*}
+    \tilde{X} = \begin{bmatrix} X \\ \sqrt{\lambda} I \end{bmatrix}
+    \quad \mbox{and} \quad
+    \tilde{y} = \begin{bmatrix} y \\ 0 \end{bmatrix}
+\end{align*}
+Then the regression estimates are given by
+\begin{align*}
+    (\tilde{X}^{T} \tilde{X})^{-1} \tilde{X}^{T} \tilde{y}
+    &= \left(
+        \begin{bmatrix} X^{T} & \sqrt{\lambda} I \end{bmatrix}
+        \begin{bmatrix} X \\ \sqrt{\lambda} I \end{bmatrix}
+    \right)^{-1}
+        \begin{bmatrix} X^{T} & \sqrt{\lambda} I \end{bmatrix}
+        \begin{bmatrix} y \\ 0 \end{bmatrix}
+    \\&= \left(
+        X^{T} X + \lambda I
+    \right)^{-1}
+    X^{T} y
+\end{align*}
+which is identical to the ridge regression estimates (see equation 3.44 in page 64).
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 3.13}{%
+
+    Derive the expression (3.62), and show that $\hat{\beta}^{\textrm{pcr}}(p) =
+    \hat{\beta}^{\textrm{ls}}$.
+
+}
+
+Equation (3.62) is
+\begin{align*}
+    \hat{\beta}^{\textrm{pcr}}(M) &= \sum_{m=1}^{M} \hat{\theta}_{m} v_{m} \\
+    &= \sum_{m=1}^{M} \frac{\langle z_{m}, y \rangle}{\langle z_{m}, z_{m} \rangle} v_{m} \\
+\end{align*}
+where $z_{m}$ is the $m$th principal components of $X$, $X v_{m}$.
+Recall the principal components are given by the singular value decomposition $X = UDV^{T}$.
+Then, $Z = XV = UD$, and
+\begin{align*}
+    \hat{\beta}^{\textrm{pcr}}(p) &= V (Z^{T} Z)^{-1} Z^{T} Y \\
+    &= V (V^{T} X^{T} X V)^{-1} V^{T} X^{T} Y \\
+    &= (X^{T} X)^{-1} X^{T} Y \\
+    &= \hat{\beta}^{\textrm{ls}}.
+\end{align*}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 3.14}{%
+
+    Show that in the orthogonal case, PLS stops after $m = 1$ steps, because subsequent
+    $\hat{\phi}_{mj}$ in step 2 in Algorithm 3.3 are zero.
+
+}
+
+Follow the notation in Algorithm 3.3, I have
+\begin{align*}
+    \hat{y}^{(0)} &= \bar{y} 1 \\
+    x_{j}^{(0)} &= x_{j} \quad (j = 1,\dots,p)
+\end{align*}
+Then,
+\begin{align*}
+    \hat{\phi}_{1j} &= \langle x_{j}^{(0)}, y \rangle = \langle x_{j}, y \rangle \\
+    z_{1} &= \sum_{j=1}^{p} \hat{\phi}_{1j} x_{j}^{(0)} = \sum_{j=1}^{p} \hat{\phi}_{1j} x_{j} \\
+    x_{j}^{(1)} &= x_{j}^{(0)} - \frac{\langle z_{1}, x_{j}^{(0)} \rangle}{\langle z_{1}, z_{1} \rangle} z_{1}
+    = x_{j} - \frac{\langle z_{1}, x_{j} \rangle}{\langle z_{1}, z_{1} \rangle} z_{1}
+\end{align*}
+Thus,
+\begin{align*}
+    \hat{\phi}_{2j} &= \langle x_{j}^{(1)}, y \rangle \\
+    &= \left\langle x_{j} - \frac{\langle z_{1}, x_{j} \rangle}{\langle z_{1}, z_{1} \rangle} z_{1},
+    y \right\rangle \\
+    &= x_{j}^{T} y - \frac{z_{1}^{T} x_{j}}{z_{1}^{T} z_{1}} z_{1}^{T} y \\
+    &= \hat{\phi}_{1j} - \frac{\hat{\phi}_{1j}}{\sum_{i=1}^{p} \hat{\phi}_{1i}^{2}} \sum_{i=1}^{p}
+    \hat{\phi}_{1i} \, x_{i}^{T} y \\
+    &= \hat{\phi}_{1j} - \frac{\hat{\phi}_{1j}}{\sum_{i=1}^{p} \hat{\phi}_{1i}^{2}} \sum_{i=1}^{p}
+    \hat{\phi}_{1i} \, \hat{\phi}_{1i} \\
+    &= 0.
+\end{align*}
+Then the algorithm must stop.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \exercise{Ex. 3.15}{%
+%
+%     Verify expression (3.64), and hence show that the partial least squares directions
+%     are a compromise between the ordinary regression coefficient and the principal
+%     component directions.
+%
+% }
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 3.16}{%
+
+    Derive the entries in Table 3.4, the explicit forms for estimators in the orthogonal
+    case.
+
+}
+
+Table 3.4 lists three transformations of the least squares estimate $\hat{\beta}_{j}$ in the case of
+orthonormal columns of $X$. Then,
+\begin{align*}
+    X^{T} X = I \quad \mbox{and} \quad X X^{T} = I
+\end{align*}
+and thus,
+\begin{align*}
+    \hat{\beta} &= (X^{T} X)^{-1} X^{T} y = X^{T} y, \quad\mbox{and}\quad
+    z_{j}^{2} = \frac{\hat{\beta}_{j}^{2}}{\hat{\sigma}^{2}},
+\end{align*}
+where $\hat{\sigma}^{2}$ is the estimated variance of $y$.
+
+\vspace{1em}
+
+\noindent\textbf{(1) Best subset}
+
+Given that the columns of $X$ are orthogonal, the best subset of size $M$, which gives
+the smallest residual sum of squares, include $M$ variables whose squared $z$ score is
+the largest. Letting $z_{(M)}^{2}$ the $M$th largest squared $z$ score, the best subset
+of size $M$ is given by
+\begin{align*}
+    \hat{\beta}_{j} \cdot I\left(\hat{z}_{j}^{2} \geq \hat{z}_{(M)}^{2} \right)
+    \quad \Leftrightarrow \quad
+        \hat{\beta}_{j} \cdot I\left(\hat{\beta}_{j}^{2} \geq \hat{\beta}_{(M)}^{2} \right)
+    \quad \Leftrightarrow \quad
+        \hat{\beta}_{j} \cdot I\left(\left\vert \hat{\beta}_{j} \right\vert \geq \left\vert
+        \hat{\beta}_{(M)} \right\vert \right).
+\end{align*}
+
+\vspace{1em}
+
+\noindent\textbf{(2) Ridge}
+
+The parameter of ridge regression is given by
+\begin{align*}
+    \hat{\beta}^{\textrm{ridge}} &= (X^{T} X + \lambda I)^{-1} X^{T} y \\
+    &= (I + \lambda I)^{-1} X^{T} y \\
+    &= (I + \lambda I)^{-1} \hat{\beta} \\
+    &= \frac{1}{1 + \lambda} \hat{\beta}.
+\end{align*}
+
+\vspace{1em}
+
+\noindent\textbf{(3) Lasso}
+
+The parameter is given by Equation (3.52):
+\begin{align*}
+    \hat{\beta}^{\textrm{lasso}} = \arg\min_{\beta} \left\lbrack
+        \frac{1}{2} \sum_{i=1}^{N} (y - \sum_{j=1}^{p} x_{ij} \beta_{j})^{2}
+        + \lambda \sum_{j=1}^{p} \left\vert \beta_{j} \right\vert
+    \right\rbrack.
+\end{align*}
+Then
+\begin{align*}
+    \hat{\beta}^{\textrm{lasso}}
+    &= \arg\min_{\beta} \left\lbrack
+        \frac{1}{2} (y - X \beta)^{T} (y - X \beta) + \lambda \vert \beta \vert
+    \right\rbrack\\
+    &= \arg\min_{\beta} \left\lbrack
+        \frac{1}{2} (y - X \beta)^{T} X X^{T} (y - X \beta) + \lambda \vert \beta \vert
+    \right\rbrack\\
+    &= \arg\min_{\beta} \left\lbrack
+        \frac{1}{2} (\hat{\beta} - \beta)^{T} (\hat{\beta} - \beta) + \lambda \vert \beta \vert
+    \right\rbrack\\
+    &= \arg\min_{\beta} \left\lbrack
+        \frac{1}{2} \left(
+            \hat{\beta}^{T} \hat{\beta}
+            + \beta^{T} \beta - \hat{\beta}^{T} \beta - \beta^{T} \hat{\beta}
+            \right)
+            + \lambda \vert \beta \vert
+    \right\rbrack\\
+    &= \arg\min_{\beta} \left\lbrack
+        \frac{1}{2} \left(
+            \beta^{T} \beta - \hat{\beta}^{T} \beta - \beta^{T} \hat{\beta}
+            \right)
+            + \lambda \vert \beta \vert
+    \right\rbrack.
+\end{align*}
+Now let
+\begin{align*}
+    f(\beta) = \frac{1}{2} \left(
+            \beta^{T} \beta - \hat{\beta}^{T} \beta - \beta^{T} \hat{\beta}
+            \right)
+            + \lambda \vert \beta \vert
+\end{align*}
+Then the derivative of $f$ is given by
+\begin{align*}
+    \frac{d f(\beta)}{d \beta_{j}}
+      = \begin{cases}
+          \beta_{j} - \hat{\beta}_{j} + \lambda & \mbox{if } \beta > 0 \\
+          \beta_{j} - \hat{\beta}_{j} - \lambda & \mbox{if } \beta < 0.
+      \end{cases}
+\end{align*}
+By setting the derivative to be zero, I obtain $\hat{\beta}^{\textrm{lasso}}$:
+\begin{align*}
+    \hat{\beta}_{j}^{\textrm{lasso}} = \begin{cases}
+        \hat{\beta}_{j} - \lambda & \mbox{if } \hat{\beta}_{j} - \lambda > 0 \\
+        \hat{\beta}_{j} + \lambda & \mbox{if } \hat{\beta}_{j} + \lambda < 0 \\
+        0 & \mbox{otherwise}.
+    \end{cases}
+\end{align*}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 3.17}{%
+
+    Repeat the analysis of Table 3.3 on the spam data discussed in Chapter 1.
+
+}
+
+Table 3.3 summarizes the coefficients estimated with the least squares, the best subset,
+the ridge, the lasso, the PCR and the PLS methods.
+
+<<echo=FALSE>>=
+data <- as.matrix(read.table("../data/spam.data", sep=" ", header=TRUE))
+Xraw <- data[, colnames(data) != "X1"]
+X <- scale(Xraw)
+colnames(X) <- colnames(Xraw)
+y <- data[, "X1"]
+
+n_train_rows <- round(nrow(data) * 0.7)
+n_test_rows <- nrow(data) - n_train_rows
+X_train <- X[1:n_train_rows,]
+y_train <- y[1:n_train_rows]
+X_test <- X[(n_train_rows + 1):nrow(data),]
+y_test <- y[(n_train_rows + 1):nrow(data)]
+@
+
+One column in the spam data indicates whether an email was a spam (1) or not (0). This
+is a classification problem, but here, I apply linear regressions. The columns are
+normalised so that each column has zero mean and unit variance. Then, I took the
+$\Sexpr{n_train_rows}$ rows for training the models and the remaining
+$\Sexpr{n_test_rows}$ for testing. I used \texttt{glmnet} package in R to estimate
+coefficients. The shrinkage parameters for the ridge and lasso regressions are estimated
+with 10-fold cross-validation.
+
+<<echo=FALSE>>=
+fm_ls <- glmnet(X_train, y_train, lambda=c(0), alpha=0)
+coef_ls <- as.matrix(coef(fm_ls))
+param_ls <- data.frame(Term=rownames(coef_ls), LS=as.numeric(coef_ls[,1]))
+perf_ls <- assess.glmnet(fm_ls, newx=X_test, newy=y_test)
+err_ls <- data.frame(
+    Term=c("Test Error (MSE)", "Test Error (MAE)"),
+    LS=c(perf_ls$mse, perf_ls$mae))
+
+fm_ridge <- cv.glmnet(X_train, y_train, alpha = 0, parallel =TRUE)
+coef_ridge <- as.matrix(coef(fm_ridge))
+param_ridge <- data.frame(Term=rownames(coef_ridge), Ridge=as.numeric(coef_ridge[,1]))
+perf_ridge <- assess.glmnet(fm_ridge, newx=X_test, newy=y_test)
+err_ridge <- data.frame(
+    Term=c("Test Error (MSE)", "Test Error (MAE)"),
+    Ridge=c(perf_ridge$mse, perf_ridge$mae))
+
+fm_lasso <- cv.glmnet(X_train, y_train, alpha = 1, parallel =TRUE)
+coef_lasso <- as.matrix(coef(fm_lasso))
+param_lasso <- data.frame(Term=rownames(coef_lasso), Lasso=as.numeric(coef_lasso[,1]))
+perf_lasso <- assess.glmnet(fm_lasso, newx=X_test, newy=y_test)
+err_lasso <- data.frame(
+    Term=c("Test Error (MSE)", "Test Error (MAE)"),
+    Lasso=c(perf_lasso$mse, perf_lasso$mae))
+
+param <- param_ls %>% merge(param_ridge, on="Term") %>% merge(param_lasso, on="Term")
+err <- err_ls %>% merge(err_ridge, on="Term") %>% merge(err_lasso, on="Term")
+@
+
+The results are shown in Tables~\ref{tab:ex317a} and~\ref{tab:ex317b}. The spam data has
+\Sexpr{ncol(X)} columns, and Table~\ref{tab:ex317a} list the coefficients which are
+estimated to the largest values for the least square method.
+
+<<echo=FALSE>>=
+param %>%
+    arrange(desc(LS)) %>%
+    head(., n = 10) %>%
+    kable(
+        .,
+        digits = 3,
+        booktabs = TRUE,
+        caption = paste0(
+            "A few of the estimated coefficients for different methods on the spam data."
+        ),
+        label = "ex317a") %>%
+    kable_styling(
+        latex_options = c("striped", "hold_position"),
+        position = "center")
+@
+
+<<echo=FALSE>>=
+err %>%
+    kable(
+        .,
+        digits = 3,
+        booktabs = TRUE,
+        caption = paste0(
+            "Test error results for different methods on the spam data. ",
+            "MAE stands for mean absolute error, and MSE stands for mean squared error."
+        ),
+        label = "ex317b") %>%
+    kable_styling(
+        latex_options = c("striped", "hold_position"),
+        position = "center")
+@
+
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \exercise{Ex. 3.18}{%
+%
+%     Read conjugate gradient algorithms (Murray et al., 1981, for example), and establish
+%     a connection between these algorithms and partial least squares.
+%
+% }
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 3.19}{%
+
+    Show that $\Vert \hat{\beta}^{\textrm{ridge}} \Vert$ increases as its tuning
+    parameter $\lambda \rightarrow 0$. Does the same property hold for the lasso and
+    partial least squares estimates?  For the latter, consider the ``tuning parameter''
+    to be the successive steps in the algorithm.
+
+}
+
+\noindent\textbf{(1) Ridge}
+
+Let the singular value decomposition of $X$ be $UDV^{T}$ ($X=UDV^{T}$), where
+$U^{T}U=V^{T}V=VV^{T}=I$ and $D$ is a diagonal matrix. Then
+\begin{align*}
+    \Vert \hat{\beta}^{\textrm{ridge}} \Vert
+    &= \Vert (X^{T} X + \lambda I)^{-1} X^{T} y \Vert \\
+    &= \Vert (VDU^{T} UDV^{T} + \lambda VV^{T})^{-1} VDU^{T} y \Vert \\
+    &= \Vert (V D^{2} V^{T} + \lambda V V^{T})^{-1} VDU^{T} y \Vert \\
+    &= \Vert \lbrack V (D^{2} + \lambda I) V^{T} \rbrack^{-1} VDU^{T} y \Vert \\
+    &= \Vert V^{-T} (D^{2} + \lambda I)^{-1} V^{-1} VDU^{T} y \Vert  \quad \because (AB)^{-1} = B^{-1} A^{-1}\\
+    &= \Vert V (D^{2} + \lambda I)^{-1} DU^{T} y \Vert  \quad \because (V)^{-T} = V.
+\end{align*}
+Therefore,
+\begin{align*}
+    \Vert \hat{\beta}^{\textrm{ridge}} \Vert^{2}
+    &= \left(V (D^{2} + \lambda I)^{-1} DU^{T} y \right)^{T} \left(V (D^{2} + \lambda I)^{-1} DU^{T} y \right)\\
+    &= y^{T} U D (D^{2} + \lambda I)^{-1} V^{T} V (D^{2} + \lambda I)^{-1} DU^{T} y \\
+    &= y^{T} U D (D^{2} + \lambda I)^{-2} DU^{T} y \\
+    &= \sum_{i} y^{T} U_{i} \frac{d_{ii}^{2}}{\left(d_{ii}^{2} + \lambda\right)^{2}} U^{T}_{i} y \\
+    &= \sum_{i} \frac{d_{ii}^{2}}{\left(d_{ii}^{2} + \lambda\right)^{2}} y^{T} u_{i} u^{T}_{i} y \\
+    &= \sum_{i} \frac{d_{ii}^{2}}{\left(d_{ii}^{2} + \lambda\right)^{2}} \left(y^{T} u_{i}\right)^{2}.
+\end{align*}
+Then, $\Vert \hat{\beta}^{\textrm{ridge}} \Vert^{2}$ strictly, monotonically increases as
+$\lambda$ approaches to 0.
+
+\vspace{1em}
+\noindent\textbf{(2) Lasso}
+
+From Table 3.4 and Ex.\ 3.16, we know that when $X$ is an orthonormal matrix, the lasso
+estimate is given by
+\begin{align*}
+    \hat{\beta}_{j}^{\textrm{lasso}} = \begin{cases}
+        \hat{\beta}_{j} - \lambda & \mbox{if } \hat{\beta}_{j} - \lambda > 0 \\
+        \hat{\beta}_{j} + \lambda & \mbox{if } \hat{\beta}_{j} + \lambda < 0 \\
+        0 & \mbox{otherwise},
+    \end{cases}
+\end{align*}
+where $\hat{\beta}$ is the least square estimates.
+Then,
+\begin{align*}
+    \Vert \hat{\beta}_{j}^{\textrm{lasso}} \Vert = \begin{cases}
+        \Vert \hat{\beta}_{j} - \lambda \Vert & \mbox{if } \hat{\beta}_{j} - \lambda > 0 \\
+        \Vert \hat{\beta}_{j} + \lambda \Vert & \mbox{if } \hat{\beta}_{j} + \lambda < 0 \\
+        0 & \mbox{otherwise}.
+    \end{cases}
+\end{align*}
+Thus, as $\lambda$ approaches to $0$, $\Vert \hat{\beta}^{\textrm{lasso}} \Vert$
+weakly, monotonically increases from $0$ to $\Vert \hat{\beta} \Vert$.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \exercise{Ex. 3.20}{%
+%
+%     Consider the canonical-correlation problem (3.67). Show that the leading pair of
+%     canonical variates $u_{1}$ and $v_{1}$ solve the problem
+%     \begin{align}
+%         \max_{\substack{u^{T} (Y^{T} Y) u = 1 \\ v^{T} (X^{T} X) v = 1}} u^{T} (Y^{T} X) v,
+%         \tag{3.86}
+%     \end{align}
+%     a generalized SVD problem. Show that the solution is given by $u_{1} =
+%     (Y^{T}Y)^{-\frac{1}{2}} u_{1}^{*}$ and $v_{1} = (X^{T} X)^{-\frac{1}{2}} v_{1}^{*}$,
+%     where $u_{1}^{*}$ and $v_{1}^{*}$ are the leading left and right singular vectors in
+%     \begin{align}
+%         (Y^{T} Y)^{-\frac{1}{2}} (Y^{T} X) (X^{T} X)^{-\frac{1}{2}} = U^{*} D^{*} V^{*T}.
+%         \tag{3.87}
+%     \end{align}
+%     Show that the entire sequence $u_{m}$, $v_{m}$, $m=1,\dots,\min(K,p)$ is also given
+%     by (3.87).
+%
+% }
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \exercise{Ex. 3.21}{%
+%
+%     Show that the solution to the reduced-rank regression problem (3.68), with $\Sigma$
+%     estimated by $Y^{T} Y / N$, is given by (3.69). Hint: Transform $Y$ to $Y^{*} = Y
+%     \Sigma^{-\frac{1}{2}}$, and solved in terms of the canonical vectors $u_{m}^{*}$.
+%     Show that $U_{m} = \Sigma^{-\frac{1}{2}} U_{m}$, and a generalized inverse is
+%     $U_{m}^{-} = U_{m}^{*T} \Sigma^{\frac{1}{2}}$.
+%
+% }
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \exercise{Ex. 3.22}{%
+%
+%     Show that the solution in Exercise 3.21 does not change if $\Sigma$ is estimated by
+%     the more natural quantity $(Y - X\hat{B})^{T} (Y - X\hat{B})/(N - pK)$.
+%
+% }
+
+
+\exercise{Ex. 3.23}{%
+
+    Consider a regression problem with all variables and response having mean zero and
+    standard deviation one. Suppose also that each variable has identical absolute
+    correlation with the response:
+    \begin{align*}
+        \frac{1}{N} \vert \langle x_{j}, y \rangle \vert = \lambda,
+        \quad j = 1, \dots, p.
+    \end{align*}
+    Let $\hat{\beta}$ be the least-squares coefficient of $y$ on $X$, and let $u(\alpha)
+    = \alpha X \hat{\beta}$ for $\alpha \in [0, 1]$ be the vector that moves a fraction
+    $\alpha$ toward the least squares fit $u$. Let $RSS$ be the residual sum-of-squares
+    from the full least squares fit.
+
+    \vspace{1em}
+
+    (a) Show that
+    \begin{align*}
+        \frac{1}{N}
+            \vert \langle x_{j}, y - u(\alpha) \rangle \vert = (1 - \alpha) \lambda,
+            \quad
+            j = 1,\dots, p,
+    \end{align*}
+    and hence the correlations of each $x_{j}$ with the residuals remain equal in
+    magnitude as we progress toward $u$.
+
+    \vspace{1em}
+
+    (b) Show that these correlations are all equal to
+    \begin{align*}
+        \lambda(\alpha)
+        = \frac{(1 - \alpha)}{\sqrt{(1-\alpha)^{2} + \frac{\alpha(2-\alpha)}{N}
+        RSS}} \lambda,
+    \end{align*}
+    and hence they decrease monotonically to zero.
+
+    \vspace{1em}
+
+    (c) Use these results to show that the LAR algorithm in Section 3.4.4 keeps the
+    correlations tied and monotonically decreasing, as claimed in (3.55).
+
+}
+
+\noindent\textbf{(a)}
+
+First, I note
+\begin{align*}
+    X^{T} \left( y - u(\alpha)\right)
+    &= X^{T} \left( y - \alpha X \beta \right)\\
+    &= X^{T} \left( y - \alpha X \left(X^{T} X \right)^{-1}X^{T} y \right)\\
+    &= X^{T} y - \alpha X^{T} y\\
+    &= (1 - \alpha) X^{T} y.
+\end{align*}
+As $\langle x_{j}, y - u(\alpha) \rangle$ is the $j$th element of vector $X^{T} \left( y
+- u(\alpha)\right)$,
+\begin{align*}
+    \vert \langle x_{j}, y - u(\alpha) \rangle \vert
+    &= \left\vert x_{j}^{T} \left( y - u(\alpha) \right) \right\vert\\
+    &= \left\vert \left\lbrack X^{T} \left( y - u(\alpha) \right)\right\rbrack_{j} \right\vert\\
+    &= \left\vert (1 - \alpha) \left\lbrack X^{T} y \right\rbrack_{j} \right\vert \\
+    &= (1 - \alpha) \vert \langle x_{j}, y \rangle \vert \\
+    &= (1 - \alpha) N \lambda
+\end{align*}
+Therefore,
+\begin{align*}
+    \frac{1}{N}
+        \vert \langle x_{j}, y - u(\alpha) \rangle \vert = (1 - \alpha) \lambda.
+\end{align*}
+
+\vspace{1em}
+\noindent\textbf{(b)}
+
+The correlation between $x_{j}$ and $y - u(\alpha)$ is given by
+\begin{align*}
+    \frac{Cov(x_{j}, y - u(\alpha))}{\sqrt{Var(x_{j})} \sqrt{Var(y - u(\alpha))}}
+    = \frac{Cov(x_{j}, y - u(\alpha))}{\sqrt{Var(y - u(\alpha))}}
+\end{align*}
+because $x_{j}$ has zero mean and unit standard deviation.
+
+Given that both $x_{j}$ and $y$ have zero mean, the covariance between $x_{j}$ and $y -
+u(\alpha)$ is given by
+\begin{align*}
+    Cov(x_{j}, y - u(\alpha)) = \frac{1}{N} x_{j}^{T} (y - u(\alpha)) = (1 - \alpha) \lambda.
+\end{align*}
+Then,
+\begin{align*}
+    \frac{Cov(x_{j}, y - u(\alpha))}{\sqrt{Var(y - u(\alpha))}}
+    = \frac{(1 - \alpha) \lambda}{\sqrt{Var(y - u(\alpha))}}.
+\end{align*}
+
+Before calculating the variance of $y - u(\alpha)$, we consider the residual sum of square,
+which is given by
+\begin{align*}
+    RSS = {(y - X \beta)}^{T} (y - X \beta),
+\end{align*}
+and as $\beta$ is the least-square coefficient,
+\begin{align*}
+    &\frac{d RSS}{d \beta} = 0\\
+    &\Leftrightarrow X^{T} (y - X \beta) = 0\\
+    &\Leftrightarrow X^{T} y = X^{T} X \beta.
+\end{align*}
+Then,
+\begin{align*}
+    RSS
+    &= y^{T} y - y^{T} X \beta - \beta^{T} X^{T} y + \beta^{T} X^{T} X \beta \\
+    &= y^{T} y - y^{T} X \beta - \beta^{T} X^{T} y + \beta^{T} X^{T} y \\
+    &= y^{T} y - y^{T} X \beta.
+\end{align*}
+Now, the variance is given by
+\begin{align*}
+    Var(y - u(\alpha))
+    &= \frac{1}{N} {(y - u(\alpha))}^{T} (y - u(\alpha))\\
+    &= \frac{1}{N} {(y - \alpha X \beta)}^{T} (y - \alpha X \beta) \\
+    &= \frac{1}{N} \left\lbrack
+        y^{T} y - \alpha y^{T} X \beta - \alpha \beta^{T} X^{T} y + \alpha^{2} \beta^{T} X^{T} X \beta
+    \right\rbrack\\
+    &= \frac{1}{N} \left\lbrack
+        y^{T} y - \alpha y^{T} X \beta - \alpha \beta^{T} X^{T} y + \alpha^{2} \beta^{T} X^{T} y
+    \right\rbrack\\
+    &= \frac{1}{N} \left\lbrack
+        y^{T} y - 2 \alpha y^{T} X \beta + \alpha^{2} y^{T} \beta X
+    \right\rbrack\\
+    &= \frac{1}{N} \left\lbrack
+        y^{T} y + (\alpha^{2} - 2 \alpha) y^{T} X \beta
+    \right\rbrack\\
+    &= \frac{1}{N} \left\lbrack
+        y^{T} y + (\alpha^{2} - 2 \alpha) (y^{T} y - RSS)
+    \right\rbrack\\
+    &= \frac{1}{N} \left\lbrack
+    {(1 - \alpha)}^{2} y^{T} y + \alpha(2 - \alpha) RSS
+    \right\rbrack\\
+    &= \left\lbrack
+    {(1 - \alpha)}^{2} + \frac{\alpha(2 - \alpha)}{N} RSS
+    \right\rbrack,
+\end{align*}
+because that $y$ has zero mean and unit standard deviation.
+
+Therefore, the correlation is given by
+\begin{align*}
+    \frac{Cov(x_{j}, y - u(\alpha))}{\sqrt{Var(x_{j})} \sqrt{Var(y - u(\alpha))}}
+    = \frac{Cov(x_{j}, y - u(\alpha))}{\sqrt{Var(y - u(\alpha))}}
+    = \frac{(1 - \alpha) \lambda}{\sqrt{Var(y - u(\alpha))}}
+    = \frac{(1 - \alpha) \lambda}{\sqrt{{(1 - \alpha)}^{2} + \frac{\alpha(2 -
+    \alpha)}{N} RSS}}.
+\end{align*}
+
+To prove that the correlation monotonically decreases to zero, as $\alpha$ approaches to
+$1$, I rewrite the above correlation:
+\begin{align*}
+    \frac{(1 - \alpha) \lambda}{\sqrt{{(1 - \alpha)}^{2} + \frac{\alpha(2 - \alpha)}{N}
+    RSS}}
+    = \frac{\lambda}{\sqrt{1 + \frac{\alpha(2 - \alpha)}{{(1 - \alpha)}^{2}} \frac{RSS}{N}}}.
+\end{align*}
+The term, $\alpha$, $\frac{\alpha(2 - \alpha)}{{(1 - \alpha)}^{2}}$,
+monotonically increases as $\alpha$ approaches to 1. To see this, I differentiate the
+term with respect to $\alpha$:
+\begin{align*}
+    \frac{d}{d\alpha}\frac{\alpha(2 - \alpha)}{{(1 - \alpha)}^{2}}
+    &=
+    \left(\frac{d}{d\alpha}\alpha(2 - \alpha)\right) \frac{1}{{(1 - \alpha)}^{2}}
+    + \alpha(2 - \alpha)\left(\frac{d}{d\alpha}\frac{1}{{(1 - \alpha)}^{2}}\right)\\
+    &= \frac{2(1 - \alpha)}{{(1 - \alpha)}^{2}}
+    + \alpha(2 - \alpha)\frac{2}{{(1 - \alpha)}^{3}}\\
+    &= \frac{2(1 - \alpha)(1 - \alpha) + 2 \alpha (2 - \alpha)}{{(1 - \alpha)}^{3}}\\
+    &= \frac{2}{{(1 - \alpha)}^{3}} > 0 \quad \because \alpha \in [0, 1].
+\end{align*}
+Then, the correlation monotonically decreases from $\lambda$ to $0$, as $\alpha$
+approaches from $0$ to $1$.
+
+\vspace{1em}
+
+\noindent\textbf{(c)}
+
+In the LAR algorithm, $y - u(\alpha)$ is gradually decreased by increasing $\alpha$.
+From (a) above, the correlation between between $x_{j}$ and $y - u(\alpha)$ is tied
+(i.e., the correlation is identical for all $j$) and from (b) above, the correlation
+monotonically decreases as $\alpha$ increases.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \exercise{Ex. 3.24}{%
+%
+%     \textit{LAR directions} Using the notation around equation (3.55) on page 74, show
+%     that the LAR direction makes an equal angle with each of the predictors in
+%     $\mathcal{A}_{k}$.
+%
+% }
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \exercise{Ex. 3.25}{%
+%
+%     \textit{LAR look-ahead (Efron et al., 2004, Sec. 2).} Starting at the beginning of
+%     the $k$th step of the LAR algorithm, derive expressions to identify the next
+%     variable to enter the active set at step $k + 1$, and the value of $\alpha$ at which
+%     this occurs (using the notation around equation (3.55) on page 74).
+%
+% }
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \exercise{Ex. 3.26}{%
+%
+%     Forward stepwise regression enters the variable at each step that most reduces the
+%     residual sum-of-squares. LAR adjusts variables that have the most (absolute)
+%     correlation with the current residuals. Show that these two entry criteria are not
+%     necessarily the same. [Hint: let $x_{j.A}$ be the $j$th variable, linearly adjusted
+%     for all the variables currently in the model. Show that the first criterion amounts
+%     to identifying the $j$ for which $\textrm{Cor}(x_{j.A}, r)$ is largest in
+%     magnitude.]
+%
+% }
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \exercise{Ex. 3.27}{%
+%
+%     \textit{Lasso and LAR.} Consider the lasso problem in Lagrange multiplier form: with
+%     $L(\beta) = \frac{1}{2} \sum_{i} (y_{i} - \sum_{j} x_{ij} \beta_{j})^{2}$, we
+%     minimize
+%     \begin{align}
+%         L(\beta) + \lambda \sum_{j} \vert \beta_{j} \vert
+%         \tag{3.88}
+%     \end{align}
+%     for fixed $\lambda > 0$.
+%
+%     \vspace{1em}
+%
+%     (a) Setting $\beta_{j} = \beta_{j}^{+} - \beta_{j}^{-}$ with $\beta_{j}^{+},
+%     \beta_{j}^{-} \geq 0$, expression (3.88) becomes $L(\beta) = \lambda
+%     \sum_{j}(\beta_{j}^{+} + \beta_{j}^{-})$. Show that the Lagrange dual function is
+%     \begin{align}
+%         L(\beta) + \lambda \sum_{j} (\beta_{j}^{+} + \beta_{j}^{-})
+%         - \lambda \sum_{j} \lambda_{j}^{+} \beta_{j}^{+}
+%         - \lambda \sum_{j} \lambda_{j}^{-} \beta_{j}^{-}
+%         \tag{3.89}
+%     \end{align}
+%     and the Karush-Kuhn-Tucker optimality conditions are
+%     \begin{align*}
+%         \nabla L(\beta)_{j} + \lambda - \lambda_{j}^{+} &= 0 \\
+%         -\nabla L(\beta)_{j} + \lambda - \lambda_{j}^{-} &= 0 \\
+%         \lambda_{j}^{+} \beta_{j}^{+} &= 0 \\
+%         \lambda_{j}^{-} \beta_{j}^{-} &= 0, \\
+%     \end{align*}
+%     along with the non-negativity constraints on the parameters and all the Lagrange
+%     multipliers.
+%
+%     \vspace{1em}
+%
+%     (b) Show that $\vert \nabla L(\beta)_{j} \vert \leq \lambda \forall j$, and that the
+%     KKT conditions imply one of the following three scenarios:
+%     \begin{align*}
+%         \lambda = 0 &\quad \Rightarrow \quad \nabla L(\beta)_{j} = 0 \forall j \\
+%         \beta_{j}^{+} > 0, \lambda > 0 &\quad \Rightarrow \quad \lambda_{j}^{+} = 0, \nabla L(\beta)_{j} = -
+%         \lambda < 0, \beta_{j}^{-} = 0 \\
+%         \beta_{j}^{-} > 0, \lambda > 0 &\quad \Rightarrow \quad \lambda_{j}^{-} = 0, \nabla L(\beta)_{j} =
+%         \lambda > 0, \beta_{j}^{+} = 0.
+%     \end{align*}
+%     Hence show that for any ``active'' predictor having $\beta_{j} \neq 0$, we must have
+%     $\nabla L(\beta)_{j} = - \lambda$ if $\beta_{j} > 0$, and $\nabla L(\beta)_{j} =
+%     \lambda$ if $\beta_{j} < 0$. Assuming the predictors are standardized, relate
+%     $\lambda$ to the correlation between the $j$th predictor and the current residuals.
+%
+%     \vspace{1em}
+%
+%     (c) Suppose that the set of active predictors is unchanged for $\lambda_{0} \geq
+%     \lambda \geq \lambda_{1}$. Show that there is a vector $\gamma_{0}$ such that
+%     \begin{align}
+%         \hat{\beta}(\lambda) = \hat{\beta}(\lambda_{0}) - (\lambda - \lambda_{0}) \gamma_{0}
+%         \tag{3.90}
+%     \end{align}
+%     Thus the lasso solution path is linear as $\lambda$ ranges from $\lambda_{0}$ to
+%     $\lambda_{1}$ (Efron et al., 2004; Rosset and Zhu, 2007).
+%
+% }
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 3.28}{%
+
+    Suppose for a given $t$ in (3.51), the fitted lasso coefficient for variable $X_{j}$
+    is $\hat{\beta}_{j} = a$. Suppose we augment our set of variables with an identical
+    copy $X_{j}^{*} = X_{j}$. Characterize the effect of this exact collinearity by
+    describing the set of solutions for $\hat{\beta}_{j}$ and $\hat{\beta}_{j}^{*}$,
+    using the same value of $t$.
+
+}
+
+The notation in this question is a bit different from others. Let me clarify the
+notations first:
+\begin{align*}
+    &X \in \R^{N \times p}\\
+    &x_{j} \quad \mbox{the $j$th column of $X$}\\
+    &X_{-j} \in \R^{N \times p - 1} \quad \mbox{$X$ without $x_{j}$}\\
+    &X^{*} = [X, x_{j}] \in \R^{N \times p + 1}\\
+    &\hat{\beta} \quad \mbox{the coefficients for $X$}\\
+    &\hat{\beta}^{*} \quad \mbox{the coefficients for $X^{*}$}.
+\end{align*}
+
+From the description, we know
+\begin{align*}
+    \hat{\beta} = \arg\min_{\beta} (y - X \beta)^{T} (y - X \beta)
+    \quad \mbox{subject to} \quad
+    \sum_{i} \vert \beta_{i} \vert \leq t.
+\end{align*}
+Then $\hat{\beta}^{*}$ is given by
+\begin{align*}
+    \hat{\beta}^{*} = \arg\min_{\beta} (y - X^{*} \beta)^{T} (y - X^{*} \beta)
+    \quad \mbox{subject to}\quad
+    \sum_{i} \vert \beta_{i} \vert \leq t.
+\end{align*}
+Because
+\begin{align*}
+    (y - X^{*} \beta)^{T} (y - X^{*} \beta)
+    &=
+    (y - X_{-j} \beta_{-j} - x_{j} (\beta_{j} + \beta_{p+1}))^{T}
+    (y - X_{-j} \beta_{-j} - x_{j} (\beta_{j} + \beta_{p+1})),
+\end{align*}
+we have
+\begin{align*}
+    \hat{\beta}_{i} = \hat{\beta}^{*}_{i} \quad\mbox{for } i = 1, \dots, j-1, j+1, \dots, p
+    \quad\mbox{and}\quad
+    \hat{\beta}_{j} = \hat{\beta}^{*}_{j} + \hat{\beta}^{*}_{p+1},
+\end{align*}
+and then
+\begin{align*}
+    \sum_{i} \vert \hat{\beta}^{*}_{i} \vert \leq \sum_{i} \vert \hat{\beta}_{i} \vert
+    &\Leftrightarrow
+    \vert \hat{\beta}^{*}_{j} \vert + \vert \hat{\beta}^{*}_{p+1} \vert \leq \vert \hat{\beta}_{j} \vert \\
+    &\Leftrightarrow
+        \vert \hat{\beta}^{*}_{j} \vert + \vert \hat{\beta}^{*}_{p+1} \vert
+        \leq \vert \hat{\beta}^{*}_{j} + \hat{\beta}^{*}_{p+1} \vert \quad \because
+        \hat{\beta}_{j} = \hat{\beta}^{*}_{j} + \hat{\beta}^{*}_{p+1} \\
+    &\Leftrightarrow
+    {\left( \vert \hat{\beta}^{*}_{j} \vert + \vert \hat{\beta}^{*}_{p+1} \vert \right)}^{2}
+        \leq {\left( \hat{\beta}^{*}_{j} + \hat{\beta}^{*}_{p+1} \right)}^{2}\\
+    &\Leftrightarrow
+    \vert \hat{\beta}^{*}_{j} \vert \cdot \vert \hat{\beta}^{*}_{p+1} \vert
+        \leq \hat{\beta}^{*}_{j} \cdot \hat{\beta}^{*}_{p+1} \\
+    &\Leftrightarrow
+        0 \leq \hat{\beta}^{*}_{j} \cdot \hat{\beta}^{*}_{p+1}.
+\end{align*}
+Therefore,
+\begin{align*}
+    \hat{\beta}_{j} = a = \hat{\beta}^{*}_{j} + \hat{\beta}^{*}_{p+1}
+    \quad\mbox{and}\quad
+    0 \leq \hat{\beta}^{*}_{j} \cdot \hat{\beta}^{*}_{p+1}.
+\end{align*}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 3.29}{%
+
+    Suppose we run a ridge regression with parameter $\lambda$ on a single variable $X$,
+    and get coefficient a. We now include an exact copy $X^{*} = X$, and refit our ridge
+    regression. Show that both coefficients are identical, and derive their value. Show
+    in general that if $m$ copies of a variable $X_{j}$ are included in a ridge
+    regression, their coefficients are all the same.
+
+}
+
+Before solving this problem, let me revise the notation to clarify.
+\begin{align*}
+    X = \lbrack x; x\rbrack
+    \quad\mbox{and}\quad
+    x \in \R^{N}.
+\end{align*}
+Then,
+\begin{align*}
+    \hat{\beta}^{\textrm{ridge}}
+    &= {(X^{T} X + \lambda I)}^{-1} X^{T} y \\
+    &= \begin{bmatrix}
+        x^{T} x + \lambda & x^{T} x \\ x^{T} x & x^{T} x + \lambda
+    \end{bmatrix}^{-1}
+    \begin{bmatrix} x^{T} y \\ x^{T} y \end{bmatrix}\\
+    &= \begin{bmatrix}
+        {\scriptstyle
+            - {\left\lbrack x^{T} x + \lambda - x^{T} x (x^{T} x + \lambda) x^{T} x
+            \right\rbrack}^{-1} x^{T} x {(x^{T} x + \lambda)}^{-1}
+        }
+        &
+        {\scriptstyle
+            {\left\lbrack x^{T} x + \lambda - x^{T} x (x^{T} x + \lambda) x^{T} x
+            \right\rbrack}^{-1}
+        }
+        \\
+        {\scriptstyle
+            {\left\lbrack x^{T} x + \lambda - x^{T} x (x^{T} x + \lambda) x^{T} x
+            \right\rbrack}^{-1}
+        }
+        &
+        {\scriptstyle
+            - {\left\lbrack x^{T} x + \lambda - x^{T} x (x^{T} x + \lambda) x^{T} x
+            \right\rbrack}^{-1} x^{T} x {(x^{T} x + \lambda)}^{-1}
+        }
+    \end{bmatrix}
+    \begin{bmatrix} x^{T} y \\ x^{T} y \end{bmatrix}\\
+    & \hspace{30em} \because \text{block-wise inversion\footnotemark}\\
+    &= \begin{bmatrix}
+        (x^{T} x + \lambda){(\lambda^{2} + 2 x^{T} x \lambda)}^{-1}
+        &
+        (- x^{T} x){(\lambda^{2} + 2 x^{T} x \lambda)}^{-1}
+        \\
+        (- x^{T} x){(\lambda^{2} + 2 x^{T} x \lambda)}^{-1}
+        &
+        (x^{T} x + \lambda){(\lambda^{2} + 2 x^{T} x \lambda)}^{-1}
+    \end{bmatrix}
+    \begin{bmatrix} x^{T} y \\ x^{T} y \end{bmatrix}\\
+    &=
+    \begin{bmatrix}
+        {(\lambda + 2 x^{T} x)}^{-1} x^{T} y
+        \\
+        {(\lambda + 2 x^{T} x)}^{-1} x^{T} y
+    \end{bmatrix}.
+\end{align*}
+\footnotetext{\texttt{ https://en.wikipedia.org/wiki/Invertible\_matrix\#Blockwise\_inversion}}
+Therefore,
+\begin{align*}
+    \hat{\beta}^{\textrm{ridge}}_{1} = \hat{\beta}^{\textrm{ridge}}_{2}.
+\end{align*}
+
+To consider a more general case, let $\tilde{X}$ be a matrix with $m$ identical columns:
+\begin{align*}
+    \tilde{X}^{(m)} = [x; x; \dots; x] \in \R^{N \times m}.
+\end{align*}
+Then its ridge coefficient is given by
+\begin{align}\label{eqn:3.29a}
+    \tilde{\beta}^{(m)} = \begin{bmatrix}
+    {(\lambda + m x^{T} x)}^{-1} x^{T} y\\
+    {(\lambda + m x^{T} x)}^{-1} x^{T} y\\
+    \vdots\\
+    {(\lambda + m x^{T} x)}^{-1} x^{T} y
+    \end{bmatrix}.
+\end{align}
+The earlier derivation proves Equation~\ref{eqn:3.29a} for $m=2$. For $m > 2$, I provide
+proof by induction on $m$. Assume Equation~\ref{eqn:3.29a} holds for $m-1$:
+\begin{align*}
+    \tilde{\beta}^{(m-1)} = \begin{bmatrix}
+    {(\lambda + (m-1) x^{T} x)}^{-1} x^{T} y\\
+    {(\lambda + (m-1) x^{T} x)}^{-1} x^{T} y\\
+    \vdots\\
+    {(\lambda + (m-1) x^{T} x)}^{-1} x^{T} y
+    \end{bmatrix}
+    =
+    {\left( \tilde{X}^{(m-1)T} \tilde{X}^{(m-1)} + \lambda I \right)}^{-1} \tilde{X}^{(m-1)T} y.
+\end{align*}
+Then,
+\begin{align*}
+    \tilde{\beta}^{(m)}
+    &=
+        {\left( \tilde{X}^{(m)T} \tilde{X}^{(m)} + \lambda I \right)}^{-1} \tilde{X}^{(m)T} y\\
+    &=
+        {\left(
+            {\lbrack \tilde{X}^{(m-1)}; x \rbrack}^{T}
+            {\lbrack \tilde{X}^{(m-1)}; x \rbrack}
+            + \lambda I
+        \right)}^{-1}
+        {\lbrack \tilde{X}^{(m-1)}; x \rbrack}^{T} y\\
+    &= {\begin{bmatrix}
+        \tilde{X}^{(m-1)T} \tilde{X}^{(m-1)} + \lambda I
+        &
+        \tilde{X}^{(m-1)T} x
+        \\
+        x^{T} \tilde{X}^{(m-1)}
+        &
+        x^{T} x + \lambda I
+        \\
+    \end{bmatrix}}^{-1}
+    \begin{bmatrix}
+        \tilde{X}^{(m-1)T} y \\
+        x^{T} y \\
+    \end{bmatrix}\\
+    &= \dots \\
+    &= \begin{bmatrix}
+        (\lambda + (m-1) x^{T} x) {(\lambda + m x^{T} x)}^{-1} \tilde{\beta}^{(m-1)}
+        \\
+        {(\lambda + m x^{T} x)}^{-1} x^{T} y
+    \end{bmatrix}\\
+    &= \begin{bmatrix}
+        {(\lambda + m x^{T} x)}^{-1} x^{T} y \\
+        {(\lambda + m x^{T} x)}^{-1} x^{T} y \\
+        \vdots\\
+        {(\lambda + m x^{T} x)}^{-1} x^{T} y
+    \end{bmatrix}.
+\end{align*}
+
+Note that by repeating the identical columns, the bias of estimator decreases. The fit
+($\hat{y}$) is given by
+\begin{align*}
+    \hat{y}^{(m)} = \tilde{X}^{(m)} \tilde{\beta}^{(m)} = x \sum_{i=1}^{m} \tilde{\beta}^{(m)}_{i}
+\end{align*}
+and without repeated columns, it is
+\begin{align*}
+    \hat{y}^{(1)} = \tilde{X}^{(1)} \tilde{\beta}^{(1)} = x \tilde{\beta}^{(1)}.
+\end{align*}
+Here,
+\begin{align*}
+    \sum_{i=1}^{m} \tilde{\beta}^{(m)}_{i}
+    = m {(\lambda + m x^{T} x)}^{-1} x^{T} y
+    = {(\lambda / m + x^{T} x)}^{-1} x^{T} y
+    >
+    {(\lambda + x^{T} x)}^{-1} x^{T} y
+    = \tilde{\beta}^{(1)}
+\end{align*}
+because $\lambda > 0$, $x^{T} x > 0$, and $m > 1$.
+Therefore, repeating the column $m$ times is equivalent to dividing the shrinkage
+parameter by $m$.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 3.30}{%
+
+    Consider the elastic-net optimization problem:
+    \begin{align}
+        \min_{\beta}
+            \Vert y - X \beta \Vert^{2}
+            + \lambda\lbrack \alpha \Vert \beta \Vert^{2}_{2}
+            + (1 - \alpha) \Vert \beta \Vert_{1} \rbrack.
+        \tag{3.91}
+    \end{align}
+    Show how one can turn this into a lasso problem, using an augmented version of $X$
+    and $y$.
+
+}
+
+From Ex.\ 3.12, the ridge regression on $X$ with the penalty parameter $\tilde{\lambda}$
+is equivalent to the least square regression on $\tilde{X}$ where
+\begin{align*}
+    \tilde{X} = \begin{bmatrix} X\\ \sqrt{\tilde{\lambda}} I \end{bmatrix}
+    \quad\mbox{and}\quad
+    \tilde{y} = \begin{bmatrix} y\\0 \end{bmatrix}.
+\end{align*}
+Now, consider the lasso regression on $\tilde{X}$ with the penalty parameter $\theta$,
+where the coefficient is given by
+\begin{align*}
+    \hat{\beta}
+    &= \min_{\beta}
+        {(\tilde{y} - \tilde{X} \beta)}^{T} (\tilde{y} - \tilde{X} \beta)
+        + \theta \Vert \beta \Vert_{1} \\
+    &= \min_{\beta}
+    {\left(\begin{bmatrix} y \\ 0 \end{bmatrix} -
+        \begin{bmatrix} X \\ \sqrt{\tilde{\lambda}} I \end{bmatrix}
+        \beta
+    \right)}^{T}
+    {\left(\begin{bmatrix} y \\ 0 \end{bmatrix} -
+        \begin{bmatrix} X \\ \sqrt{\tilde{\lambda}} I \end{bmatrix}
+        \beta
+    \right)}
+    + \theta \Vert \beta \Vert_{1} \\
+    &= \min_{\beta}
+        {(y - X \beta)}^{T} (y - X \beta)
+        + \tilde{\lambda} {\Vert \beta \Vert}^{2}_{2}
+        + \theta \Vert \beta \Vert_{1} \\
+    &= \min_{\beta}
+    {\Vert (y - X \beta) \Vert}^{2}
+        + \tilde{\lambda} {\Vert \beta \Vert}^{2}_{2}
+        + \theta \Vert \beta \Vert_{1},
+\end{align*}
+which equals to Equation 3.91 when $\tilde{\lambda} = \lambda \alpha$ and $\theta =
+\lambda (1 - \alpha)$.

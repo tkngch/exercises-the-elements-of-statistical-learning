@@ -1,0 +1,84 @@
+\documentclass[11pt, a4paper]{article}
+
+\usepackage[margin=1.2in]{geometry}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{subcaption}
+\usepackage{isomath}  % vectorsym, matrixsym, tensorsym
+\usepackage{listings}  % lstlisting
+\usepackage{placeins}  % FloatBarrier
+\usepackage{dsfont}  % mathds for indicator function
+\lstset{language=R, basicstyle=\small\ttfamily}
+
+% Package parskip sets \parindent to zero. So save the old value, loads parskip and restores
+% \parindent
+% \edef\restoreparindent{\parindent=\the\parindent\relax}
+% \usepackage{parskip}
+% \restoreparindent%
+
+\usepackage{color}
+\usepackage[most]{tcolorbox}
+\definecolor{blockgray}{gray}{0.85}
+\newtcolorbox{blockquote}{colback=blockgray,grow to right by=-1mm,grow to left by=-1mm,boxrule=0pt,boxsep=0pt,breakable}
+
+\newcommand{\exercise}[2]{
+    \FloatBarrier
+    \bigskip
+    \begin{blockquote}
+    \subsection*{#1}\label{sub:#1}
+        #2
+    \end{blockquote}
+}
+\newcommand{\R}{\rm {\displaystyle I\!R}}
+\DeclareMathOperator{\tr}{tr}
+
+\title{Exercises in Elements of Statistical Learning by Hastie, Tibshirani, and Friedman (2009)}
+\author{Takao Noguchi\\tkngch@hotmail.com}
+
+\begin{document}
+
+    \maketitle
+
+    \begin{itemize}
+        \item[-] Hastie, T., Tibshirani, R., \& Friedman, J. (2009). The Elements of Statistical
+            Learning: Data Mining, Inference, and Prediction. Retrieved from \\
+            \texttt{https://web.stanford.edu/\textasciitilde hastie/ElemStatLearn/}
+    \end{itemize}
+
+<<setup, include=FALSE, cache=FALSE>>=
+library(knitr)
+# set global chunk options
+opts_chunk$set(fig.path='output/figure/', fig.align='center', fig.show='hold')
+options(formatR.arrow=TRUE,width=90)
+@
+
+<<imports, echo=FALSE>>=
+options(kableExtra.latex.load_packages = FALSE)
+suppressMessages(library(kableExtra))
+knit_hooks$set(document = function(x) {sub('\\usepackage[]{color}', '\\usepackage[table]{xcolor}', x, fixed = TRUE)})
+suppressMessages(library(dplyr))
+suppressMessages(library(ggplot2))
+suppressMessages(library(mvtnorm))
+suppressMessages(library(glmnet))
+suppressMessages(library(doMC))  # parallel computation for glmnet
+registerDoMC(cores=4)
+@
+
+\clearpage
+
+<<chapter_02, child='chapter_02.Rnw'>>=
+@
+\clearpage
+
+<<chapter_03, child='chapter_03.Rnw'>>=
+@
+\clearpage
+
+<<chapter_04, child='chapter_04.Rnw'>>=
+@
+\clearpage
+
+\end{document}

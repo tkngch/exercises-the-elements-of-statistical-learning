@@ -1,0 +1,843 @@
+\section*{Chapter 4. Linear Methods for Classification}\label{sec:chapter_4_linear_methods_for_classification}
+\setcounter{table}{0}
+\renewcommand{\thetable}{C4.\arabic{table}}
+\setcounter{equation}{0}
+\renewcommand{\theequation}{C4.\arabic{equation}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 4.1}{%
+
+    Show how to solve the generalized eigenvalue problem
+    \begin{align*}
+        \max_{a} a^{T} B a \quad\text{subject to}\quad a^{T} W a = 1
+    \end{align*}
+    by transforming to a standard eigenvalue problem.
+
+}
+
+To solve the constrained maximization problems, I use the idea of Lagrangian
+multipliers, where the Lagrangian is
+\begin{align*}
+    \mathcal{L} = a^{T} B a - \lambda (a^{T} W a - 1).
+\end{align*}
+Then
+\begin{align*}
+    \frac{\partial \mathcal{L}}{\partial a} &= 0
+    \\\Leftrightarrow 2 B a - \lambda 2 W a &= 0
+    \\\Leftrightarrow Ba &= \lambda W a
+\end{align*}
+If $W$ is nonsingular, then we have $W^{-1} B a = \lambda a$, which is a standard
+eigenvalue problem. The vector $a$ is an eigenvector of the matrix $W^{-1} B$ and
+$\lambda$ is the corresponding eigenvalue.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 4.2}{%
+
+    Suppose we have features $x \in {\R}^{p}$, a two-class response, with class sizes
+    $N_{1}$, $N_{2}$, and the target coded as $-N/N_{1}$, and $N/N_{2}$.
+
+    \vspace{1em}
+
+    (a) Show that the LDA rule classifies to class 2 if
+    \begin{align*}
+        x^{T} \hat{\Sigma}^{-1} (\hat{\mu}_{2} - \hat{\mu}_{1})
+        >
+        \frac{1}{2} {(\hat{\mu}_{2} + \hat{\mu}_{1})}^{T} \hat{\Sigma}^{-1} {(\hat{\mu}_{2} - \hat{\mu}_{1})}
+        - \log N_{2} / N_{1}
+    \end{align*}
+    and class 1 otherwise.
+
+    \vspace{1em}
+
+    (b) Consider minimization of the least squares criterion
+    \begin{align*}
+        \sum_{i=1}^{N} (y_{i} - \beta_{0} - x_{i}^{T} \beta)^{2}.
+    \end{align*}
+    Show that the solution $\hat{\beta}$ satisfies
+    \begin{align*}
+        \left\lbrack
+            (N - 2) \hat{\Sigma} + N \hat{\Sigma}_{B} \right\rbrack \beta
+            = N(\hat{\mu}_{2} - \hat{\mu}_{1})
+    \end{align*}
+    (after simplification), where $\hat{\Sigma}_{B} = \frac{N_{1} N_{2}}{N^{2}}
+    (\hat{\mu}_{2} - \hat{\mu}_{1})
+    (\hat{\mu}_{2} - \hat{\mu}_{1})^{T}$.
+
+    \vspace{1em}
+
+    (c) Hence show that $\hat{\Sigma}_{B} \beta$ is in the direction $(\hat{\mu}_{2} -
+    \hat{\mu}_{1})$ and thus
+    \begin{align*}
+        \hat{\beta} \propto \hat{\Sigma}^{-1} (\hat{\mu}_{2} - \hat{\mu}_{1}).
+    \end{align*}
+    Therefore the least-squares regression coefficient is identical to the LDA
+    coefficient, up to a scalar multiple.
+
+    \vspace{1em}
+
+    (d) Show that this result holds for any (distinct) coding of the two classes.
+
+    \vspace{1em}
+
+    (e) Find the solution $\hat{\beta}^{0}$ (up to the same scalar multiple as in (c),
+    and hence the predicted value $\hat{f}(x) = \hat{\beta}_{0} + x^{T} \hat{\beta}$.
+    Consider the following rule: classify to class 2 if $\hat{f}(x) > 0$ and class 1
+    otherwise. Show this is not the same as the LDA rule unless the classes have equal
+    numbers of observations.
+
+}
+
+\noindent\textbf{(a)}
+
+In the LDA, the ratio of two classes is given by
+\begin{align*}
+    \frac{p(\textrm{class 2} | x)}{p(\textrm{class 1} | x)}
+    &= \frac{N_{2}}{N_{1}} \frac{f_{2}(x)}{f_{1}(x)}
+\end{align*}
+where the likelihood of class $k$ is defined as
+\begin{align*}
+    f_{k}(x) \propto \exp\left\{ -\frac{1}{2} (x - \mu_{k})^{T} \Sigma^{-1} (x - \mu_{k}) \right\}
+\end{align*}
+
+Then,
+\begin{align*}
+    \log \frac{p(\textrm{class 2} | x)}{p(\textrm{class 1} | x)}
+    &= \log \frac{N_{2}}{N_{1}} + \log \frac{f_{2}(x)}{f_{1}(x)} \\
+    &= \log \frac{N_{2}}{N_{1}} + \log {f_{2}(x)} - \log {f_{1}(x)} \\
+    &= \log \frac{N_{2}}{N_{1}} - \frac{1}{2} (x - \mu_{2})^{T} \Sigma^{-1} (x - \mu_{2}) + \frac{1}{2} (x - \mu_{1})^{T} \Sigma^{-1} (x - \mu_{1}) \\
+    &= \log \frac{N_{2}}{N_{1}} - \frac{1}{2} \left(
+    - x^{T} \Sigma^{-1} \mu_{2} - \mu_{2}^{T} \Sigma^{-1} x + \mu_{2}^{T} \Sigma^{-1} \mu_{2}
+    + x^{T} \Sigma^{-1} \mu_{1} + \mu_{1}^{T} \Sigma^{-1} x - \mu_{1}^{T} \Sigma^{-1} \mu_{1}
+    \right) \\
+    &= \log \frac{N_{2}}{N_{1}} - \frac{1}{2} \left(
+    - x^{T} \Sigma^{-1} \mu_{2} - x^{T} \Sigma^{-1} \mu_{2} + \mu_{2}^{T} \Sigma^{-1} \mu_{2}
+    + x^{T} \Sigma^{-1} \mu_{1} + x^{T} \Sigma^{-1} \mu_{1} - \mu_{1}^{T} \Sigma^{-1} \mu_{1}
+    \right) \\
+    &= \log \frac{N_{2}}{N_{1}} + \left(x^{T} \Sigma^{-1} (\mu_{2} - \mu_{1}) \right)
+    - \frac{1}{2} (\mu_{2} + \mu_{1})^{T} \Sigma^{-1} (\mu_{2} - \mu_{1}) \\
+\end{align*}
+
+Therefore, $x$ is classified into class 2 if
+\begin{align*}
+    &\frac{p(\textrm{class 2} | x)}{p(\textrm{class 1} | x)} > 1 \\
+    \Leftrightarrow&
+    \log \frac{p(\textrm{class 2} | x)}{p(\textrm{class 1} | x)} > 0 \\
+    \Leftrightarrow&
+    \log \frac{N_{2}}{N_{1}} + \left(x^{T} \Sigma^{-1} (\mu_{2} - \mu_{1}) \right)
+    - \frac{1}{2} (\mu_{2} + \mu_{1})^{T} \Sigma^{-1} (\mu_{2} - \mu_{1}) > 0 \\
+    \Leftrightarrow&
+    \left(x^{T} \Sigma^{-1} (\mu_{2} - \mu_{1}) \right)
+    > \frac{1}{2} (\mu_{2} + \mu_{1})^{T} \Sigma^{-1} (\mu_{2} - \mu_{1}) - \log
+    \frac{N_{2}}{N_{1}}.
+\end{align*}
+
+\vspace{1em}
+
+\noindent\textbf{(b)}
+
+First, the covariance matrix is estimated as
+\begin{align*}
+    (N - 2) \hat{\Sigma} =
+    \sum_{i=1}^{N_{1}} (x_{i} - \mu_{1})(x_{i} - \mu_{1})^{T} +
+    \sum_{i=N_{1}+1}^{N} (x_{i} - \mu_{2})(x_{i} - \mu_{2})^{T}
+\end{align*}
+(see page 109).
+
+Now for brevity, I organize a matrix $X$ such that the first $N_{1}$ rows are of class 1
+and the remaining $N_{2}$ rows are of class 2. I also add a vector of 1 as the first
+column:
+\begin{align*}
+    X &= \begin{bmatrix} 1 & X^{(1)} \\ 1 & X^{(2)} \end{bmatrix}
+\end{align*}
+where $X \in \R^{N \times (p+1)}$, $X^{(1)} \in \R^{N_{1} \times p}$ and $X^{(2)} \in
+\R^{N_{2} \times p}$.
+
+Then, the normal equation gives us
+\begin{align*}
+    X^{T} X \begin{bmatrix} \hat{\beta}_{0} \\ \hat{\beta} \end{bmatrix}
+    = X^{T} y
+\end{align*}
+The left hand-side of the normal equation is
+\begin{align*}
+    &X^{T} X \begin{bmatrix} \hat{\beta}_{0} \\ \hat{\beta} \end{bmatrix}\\
+    &= \begin{bmatrix} 1 & 1 \\ X^{(1)T} & X^{(2)T} \end{bmatrix}
+        \begin{bmatrix} 1 & X^{(1)} \\ 1 & X^{(2)} \end{bmatrix}
+        \begin{bmatrix} \hat{\beta}_{0} \\ \hat{\beta} \end{bmatrix} \\
+    &= \begin{bmatrix}
+        N_{1} + N_{2} & N_{1} \hat{\mu}_{1}^{T} + N_{2} \hat{\mu}_{2}^{T} \\
+        N_{1} \hat{\mu}_{1} + N_{2} \hat{\mu}_{2}
+                      & X^{(1)T} X^{(1)} + X^{(2)T} X^{(2)} \\
+    \end{bmatrix}
+        \begin{bmatrix} \hat{\beta}_{0} \\ \hat{\beta} \end{bmatrix} \\
+    &= \begin{bmatrix}
+        \hat{\beta}_{0} (N_{1} + N_{2}) + (N \hat{\mu}_{1} + N_{2} \hat{\mu}_{2})^{T} \hat{\beta}_{1}\\
+        (N \hat{\mu}_{1} + N_{2} \hat{\mu}_{2}) \hat{\beta}_{0}
+        + \left(X^{(1)T} X^{(1)} + X^{(2)T} X^{(2)} \right) \hat{\beta} \\
+    \end{bmatrix}
+\end{align*}
+Now,
+\begin{align*}
+    &X^{(1)T} X^{(1)} + X^{(2)T} X^{(2)}\\
+    &= \sum_{i=1}^{N_{1}} x_{i} x_{i}^{T} + \sum_{i=N_{1}+1}^{N} x_{i} x_{i}^{T} \\
+    &= \sum_{i=1}^{N_{1}} \left\lbrack (x_{i} - \hat{\mu}_{1}) (x_{i} - \hat{\mu}_{1})^{T}
+    + x_{i} \hat{\mu}_{1}^{T} + \hat{\mu}_{1} x_{i}^{T} - \hat{\mu}_{1} \hat{\mu}_{1}^{T}
+    \right\rbrack \\
+    &\quad+ \sum_{i=N_{1}+1}^{N} \left\lbrack (x_{i} - \hat{\mu}_{2}) (x_{i} - \hat{\mu}_{2})^{T}
+    + x_{i} \hat{\mu}_{2}^{T} + \hat{\mu}_{2} x_{i}^{T} - \hat{\mu}_{2} \hat{\mu}_{2}^{T}
+    \right\rbrack \\
+    &= \sum_{i=1}^{N_{1}} \left\lbrack (x_{i} - \hat{\mu}_{1}) (x_{i} - \hat{\mu}_{1})^{T}
+    \right\rbrack
+    + N_{1} \hat{\mu}_{1} \hat{\mu}_{1}^{T} + N_{1} \hat{\mu}_{1} \hat{\mu}_{1}^{T} - N_{1} \hat{\mu}_{1} \hat{\mu}_{1}^{T} \\
+    &\quad + \sum_{i=N_{1}+1}^{N} \left\lbrack (x_{i} - \hat{\mu}_{2}) (x_{i} - \hat{\mu}_{2})^{T}
+    \right\rbrack
+    + N_{2} \hat{\mu}_{2} \hat{\mu}_{2}^{T} + N_{2} \hat{\mu}_{2} \hat{\mu}_{2}^{T} - N_{2} \hat{\mu}_{2} \hat{\mu}_{2}^{T} \\
+    &= (N - 2) \hat{\Sigma} + N_{1} \hat{\mu}_{1} \hat{\mu}_{1}^{T} + N_{2} \hat{\mu}_{2} \hat{\mu}_{2}^{T}
+\end{align*}
+Therefore,
+\begin{align*}
+    X^{T} X \begin{bmatrix} \hat{\beta}_{0} \\ \hat{\beta} \end{bmatrix}
+    &= \begin{bmatrix}
+        \hat{\beta}_{0} + (N_{1} \hat{\mu}_{1} + N_{2} \hat{\mu}_{2})^{T} \hat{\beta}_{1}\\
+        (N \hat{\mu}_{1} + N_{2} \hat{\mu}_{2}) \hat{\beta}_{0}
+        + \left((N - 2) \hat{\Sigma} + N_{1} \hat{\mu}_{1} \hat{\mu}_{1}^{T} + N_{2} \hat{\mu}_{2} \hat{\mu}_{2}^{T} \right) \hat{\beta} \\
+    \end{bmatrix}
+\end{align*}
+
+The right hand-side of the normal equation is
+\begin{align*}
+    X^{T} y
+    = \begin{bmatrix} 1 & 1 \\ X^{(1)T} & X^{(2)T} \end{bmatrix}
+        \begin{bmatrix}
+            - N / N_{1}\\
+            - N / N_{1}\\
+            \vdots \\
+            - N / N_{1}\\
+            N / N_{2}\\
+            N / N_{2}\\
+            \vdots \\
+            N / N_{2}
+        \end{bmatrix}
+    = \begin{bmatrix}
+        -N + N \\
+        -N \hat{\mu}_{1} + N \hat{\mu}_{2}
+    \end{bmatrix}
+    = \begin{bmatrix}
+        0 \\ N (\hat{\mu}_{2} - \hat{\mu}_{1})
+    \end{bmatrix},
+\end{align*}
+because from the description, $y_{1} = y_{2} = \cdots = y_{N_{1}} = - N / N_{1}$ and
+$y_{N_{1}+1} = y_{N_{1}+2} = \cdots = y_{N} = N / N_{2}$.
+
+Putting them together,
+\begin{align*}
+    &
+    X^{T} X \begin{bmatrix} \hat{\beta}_{0} \\ \hat{\beta} \end{bmatrix}
+    = X^{T} y\\
+    &\Leftrightarrow
+    \begin{bmatrix}
+        \hat{\beta}_{0} + (N_{1} \hat{\mu}_{1} + N_{2} \hat{\mu}_{2})^{T} \hat{\beta}_{1}\\
+        (N \hat{\mu}_{1} + N_{2} \hat{\mu}_{2}) \hat{\beta}_{0}
+        + \left((N - 2) \hat{\Sigma} + N_{1} \hat{\mu}_{1} \hat{\mu}_{1}^{T} + N_{2} \hat{\mu}_{2} \hat{\mu}_{2}^{T} \right) \hat{\beta} \\
+    \end{bmatrix}
+    = \begin{bmatrix}
+        0 \\ N (\hat{\mu}_{2} - \hat{\mu}_{1})
+    \end{bmatrix} \\
+    &\Leftrightarrow
+    \begin{cases}
+        \hat{\beta}_{0} + (N_{1} \hat{\mu}_{1} + N_{2} \hat{\mu}_{2})^{T} \hat{\beta}_{1} = 0 \\
+        (N_{1} \hat{\mu}_{1} + N_{2} \hat{\mu}_{2}) \hat{\beta}_{0}
+        + \left((N - 2) \hat{\Sigma} + N_{1} \hat{\mu}_{1} \hat{\mu}_{1}^{T} + N_{2} \hat{\mu}_{2}
+        \hat{\mu}_{2}^{T} \right) \hat{\beta} = N (\hat{\mu}_{2} - \hat{\mu}_{1})
+    \end{cases}
+\end{align*}
+The solution is given by
+\begin{align*}
+    \left\lbrack
+        (N - 2) \hat{\Sigma} + N \hat{\Sigma}_{B} \right\rbrack \beta
+        = N(\hat{\mu}_{2} - \hat{\mu}_{1})
+\end{align*}
+where $\hat{\Sigma}_{B} = \frac{N_{1} N_{2}}{N^{2}}
+(\hat{\mu}_{2} - \hat{\mu}_{1})
+(\hat{\mu}_{2} - \hat{\mu}_{1})^{T}$.
+
+
+\vspace{1em}
+
+\noindent\textbf{(c)}
+
+Given the results above (b),
+\begin{align*}
+    \hat{\Sigma}_{B} \hat{\beta}
+    = \frac{N_{1} N_{2}}{N^{2}}
+    (\hat{\mu}_{2} - \hat{\mu}_{1}) (\hat{\mu}_{2} - \hat{\mu}_{1})^{T} \hat{\beta}
+    = Z (\hat{\mu}_{2} - \hat{\mu}_{1})
+\end{align*}
+where $Z$ is a scalar, $\frac{N_{1} N_{2}}{N^{2}}(\hat{\mu}_{2} - \hat{\mu}_{1})^{T}
+\hat{\beta}$.
+Thus, $\hat{\beta}$ is in the direction of $(\hat{\mu}_{2} - \hat{\mu}_{1})$.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 4.3}{%
+
+    Suppose we transform the original predictors $X$ to $\hat{Y}$ via linear regression.
+    In detail, let $\hat{Y} = X(X^{T} X)^{-1} X^{T} Y = X\hat{B}$, where $Y$ is the
+    indicator response matrix. Similarly for any input $x \in \R^{p}$, we get a
+    transformed vector $\hat{y} = \hat{B}^{T} x \in \R^{K}$. Show that LDA using
+    $\hat{Y}$ is identical to LDA in the original space.
+
+}
+
+For brevity, I only consider two class case.
+
+When LDA is applied on the original space, the log ratio is given by
+\begin{align*}
+    \log \frac{p(\textrm{class 2} | x)}{p(\textrm{class 1} | x)}
+    &= \log \frac{N_{2}}{N_{1}} + \left(x^{T} \Sigma^{-1} (\mu_{2} - \mu_{1}) \right)
+    - \frac{1}{2} (\mu_{2} + \mu_{1})^{T} \Sigma^{-1} (\mu_{2} - \mu_{1})
+\end{align*}
+where the covariance matrix is
+\begin{align*}
+    \Sigma =
+    \sum_{k=1}^{K} \sum_{g_{i}=k} (x_{i} - \mu_{k})(x_{i} - \mu_{k})^{T} / (N - K)
+\end{align*}
+(see page 109).
+Then when LDA is applied on the transformed space, the covariance is given by
+\begin{align*}
+    \hat{\Sigma}
+    &= \sum_{k=1}^{K} \sum_{g_{i}=k} (\hat{B}^{T} x_{i} - \hat{B}^{T} \mu_{k})(\hat{B}^{T} x_{i} - \hat{B}^{T} \mu_{k})^{T} / (N - K)
+    \\
+    &= \sum_{k=1}^{K} \sum_{g_{i}=k} \hat{B}^{T} (x_{i} - \mu_{k})(x_{i} - \mu_{k})^{T} \hat{B} / (N - K) \\
+    &= \hat{B}^{T} \Sigma \hat{B}.
+\end{align*}
+Therefore,
+\begin{align*}
+    \log \frac{p(\textrm{class 2} | x)}{p(\textrm{class 1} | x)}
+    &= \log \frac{N_{2}}{N_{1}}
+    + \left((\hat{B}^{T} x)^{T} \hat{\Sigma}^{-1} (\hat{B}^{T} \mu_{2} - \hat{B}^{T} \mu_{1}) \right)
+    - \frac{1}{2} (\hat{B}^{T} \mu_{2} + \hat{B}^{T} \mu_{1})^{T} \hat{\Sigma}^{-1} (\hat{B}^{T} \mu_{2} - \hat{B}^{T} \mu_{1})
+    \\
+    &= \log \frac{N_{2}}{N_{1}}
+    + \left(x^{T} \hat{B} \hat{\Sigma}^{-1} \hat{B}^{T} (\mu_{2} - \mu_{1}) \right)
+    - \frac{1}{2} (\mu_{2} + \mu_{1})^{T} \hat{B} \hat{\Sigma}^{-1} \hat{B}^{T} (\mu_{2} - \mu_{1})
+    \\
+    &= \log \frac{N_{2}}{N_{1}} + \left(x^{T} \Sigma^{-1} (\mu_{2} - \mu_{1}) \right)
+    - \frac{1}{2} (\mu_{2} + \mu_{1})^{T} \Sigma^{-1} (\mu_{2} - \mu_{1})
+\end{align*}
+because
+\begin{align*}
+    \hat{B} \hat{\Sigma}^{-1} \hat{B}^{T}
+    &= \hat{B} (\hat{B}^{T} \Sigma \hat{B})^{-1} \hat{B}^{T}
+    \\
+    &= \hat{B} \hat{B}^{-1} \Sigma^{-1} \hat{B}^{-T} \hat{B}^{T}
+    \\
+    &= \Sigma^{-1}.
+\end{align*}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 4.4}{%
+
+    Consider the multilogit model with $K$ classes (4.17). Let $\beta$ be the $(p + 1)(K
+    - 1)$-vector consisting of all the coefficients. Define a suitably enlarged version
+    of the input vector $x$ to accommodate this vectorized coefficient matrix. Derive
+    the Newton-Raphson algorithm for maximizing the multinomial log-likelihood, and
+    describe how you would implement this algorithm.
+
+}
+
+Before describing the enlarged input matrix, let me consider the log-likelihood function
+and its derivatives. Letting ${\beta}^{(j)}$ be the coefficients for the log-odds of the
+class $j$, I have
+\begin{align*}
+    L(\beta)
+    &= \sum_{i=1}^{N} \log {\Pr}_{y_{i}}\left(x_{i} \beta^{(j)}\right)
+    \\
+    &= \sum_{i=1}^{N} \sum_{j=1}^{K-1} \mathds{1}_{y_{i} = j}
+        \log {\Pr}_{j}\left(x_{i} \beta^{(j)}\right)
+    \\
+    &= \sum_{i=1}^{N} \sum_{j=1}^{K-1}
+        \left\lbrack
+        \mathds{1}_{y_{i} = j} \left(
+            \begin{bmatrix} 1 & x_{i, \cdot} \end{bmatrix} {\beta}^{(j)}
+        \right)
+        - \log\left(
+            1 + \sum_{k=1}^{K-1} \exp\left\{
+                \begin{bmatrix} 1 & x_{i, \cdot} \end{bmatrix} {\beta}^{(k)}
+            \right\}
+        \right)
+    \right\rbrack
+\end{align*}
+Here, $\mathds{1}$ is an indicator function.
+Then, the derivative is
+\begin{align*}
+    \frac{\partial L(\beta)}{\partial \beta^{(k)}}
+    &= \sum_{i=1}^{N}
+        \left\lbrack
+        \mathds{1}_{y_{i} = k} \left(
+            \begin{bmatrix} 1 & x_{i, \cdot} \end{bmatrix}^{T}
+        \right)
+    -
+        \frac{
+                \begin{bmatrix} 1 & x_{i, \cdot} \end{bmatrix}^{T}
+                \exp\left\{
+                    \begin{bmatrix} 1 & x_{i, \cdot} \end{bmatrix} {\beta}^{(k)}
+                \right\}
+        }{
+            1 + \sum_{j=1}^{K-1} \exp\left\{
+                \begin{bmatrix} 1 & x_{j, \cdot} \end{bmatrix} {\beta}^{(j)}
+            \right\}
+        }
+        \right\rbrack
+    \\
+    &= \sum_{i=1}^{N}
+    \left\lbrack
+        \mathds{1}_{y_{i} = k} \left(
+            \begin{bmatrix} 1 & x_{i, \cdot} \end{bmatrix}^{T}
+        \right)
+    -
+        \begin{bmatrix} 1 & x_{i, \cdot} \end{bmatrix}^{T}
+        {\Pr}_{k}\left(x_{i} \beta^{(k)}\right)
+    \right\rbrack\\
+    &= \sum_{i=1}^{N}
+        \begin{bmatrix} 1 & x_{i, \cdot} \end{bmatrix}^{T}
+        \left( \mathds{1}_{y_{i} = k} - {\Pr}_{k}\left(x_{i} \beta^{(k)}\right) \right)
+\end{align*}
+The second derivative is
+\begin{align*}
+    &\frac{\partial^{2} L(\beta)}{\partial \beta^{(k)} \partial \beta^{(k)T}}
+    \\
+    &= \frac{\partial}{\partial \beta^{(k)T}}
+    \sum_{i=1}^{N}
+        \frac{
+            - \begin{bmatrix} 1 & x_{i, \cdot} \end{bmatrix}^{T}
+                \exp\left\{
+                    \begin{bmatrix} 1 & x_{i, \cdot} \end{bmatrix} {\beta}^{(k)}
+                \right\}
+        }{
+            1 + \sum_{j=1}^{K-1} \exp\left\{
+                \begin{bmatrix} 1 & x_{j, \cdot} \end{bmatrix} {\beta}^{(j)}
+            \right\}
+        }
+    \\
+    &= \sum_{i=1}^{N}
+        - \begin{bmatrix} 1 & x_{i, \cdot} \end{bmatrix}^{T}
+        \left(
+        \frac{
+                \begin{bmatrix} 1 & x_{i, \cdot} \end{bmatrix}
+                \exp\left\{
+                    \begin{bmatrix} 1 & x_{i, \cdot} \end{bmatrix} {\beta}^{(k)}
+                \right\}
+        }{
+            1 + \sum_{j=1}^{K-1} \exp\left\{
+                \begin{bmatrix} 1 & x_{j, \cdot} \end{bmatrix} {\beta}^{(j)}
+            \right\}
+        }
+        -
+        \frac{
+                \begin{bmatrix} 1 & x_{i, \cdot} \end{bmatrix}
+                \exp\left\{
+                    \begin{bmatrix} 1 & x_{i, \cdot} \end{bmatrix} {\beta}^{(k)}
+                \right\}
+                \exp\left\{
+                    \begin{bmatrix} 1 & x_{i, \cdot} \end{bmatrix} {\beta}^{(k)}
+                \right\}
+        }{
+        {\left(
+            1 + \sum_{j=1}^{K-1} \exp\left\{
+                \begin{bmatrix} 1 & x_{j, \cdot} \end{bmatrix} {\beta}^{(j)}
+            \right\}
+        \right)}^{2}
+        }
+        \right)
+    \\
+    &= - \sum_{i=1}^{N}
+    {\Pr}_{k}\left(x_{i}, \beta^{(k)}\right)
+            \left(1 - {{\Pr}_{k}\left(x_{i}, \beta^{(k)}\right)} \right)
+        \begin{bmatrix} 1 & x_{i, \cdot} \end{bmatrix}
+        \begin{bmatrix} 1 & x_{i, \cdot} \end{bmatrix}^{T}
+\end{align*}
+and when $a \neq k$,
+\begin{align*}
+    \frac{\partial^{2} L(\beta)}{\partial \beta^{(k)} \partial \beta^{(a)T}}
+    &= \frac{\partial}{\partial \beta^{(a)T}}
+    \sum_{i=1}^{N}
+        \frac{
+            - \begin{bmatrix} 1 & x_{i, \cdot} \end{bmatrix}^{T}
+                \exp\left\{
+                    \begin{bmatrix} 1 & x_{i, \cdot} \end{bmatrix} {\beta}^{(k)}
+                \right\}
+        }{
+            1 + \sum_{j=1}^{K-1} \exp\left\{
+                \begin{bmatrix} 1 & x_{j, \cdot} \end{bmatrix} {\beta}^{(j)}
+            \right\}
+        }
+    \\
+    &= \sum_{i=1}^{N}
+        - \begin{bmatrix} 1 & x_{i, \cdot} \end{bmatrix}^{T}
+        \left(
+        -
+        \frac{
+                \begin{bmatrix} 1 & x_{i, \cdot} \end{bmatrix}
+                \exp\left\{
+                    \begin{bmatrix} 1 & x_{i, \cdot} \end{bmatrix} {\beta}^{(k)}
+                \right\}
+                \exp\left\{
+                    \begin{bmatrix} 1 & x_{i, \cdot} \end{bmatrix} {\beta}^{(a)}
+                \right\}
+        }{
+        {\left(
+            1 + \sum_{j=1}^{K-1} \exp\left\{
+                \begin{bmatrix} 1 & x_{j, \cdot} \end{bmatrix} {\beta}^{(j)}
+            \right\}
+        \right)}^{2}
+        }
+        \right)
+    \\
+    &= \sum_{i=1}^{N}
+    {\Pr}_{k}\left(x_{i}, \beta^{(k)}\right) \, {{\Pr}_{a}\left(x_{i}, \beta^{(a)}\right)}
+        \begin{bmatrix} 1 & x_{i, \cdot} \end{bmatrix}
+        \begin{bmatrix} 1 & x_{i, \cdot} \end{bmatrix}^{T}.
+\end{align*}
+
+Now I define the enlarged input matrix, $\tilde{X}$, as below.
+\begin{align*}
+    \tilde{X} =
+    \begin{bmatrix}
+        1 & X & 0 & 0 & \cdots & 0 & 0 \\
+        0 & 0 & 1 & X & \cdots & 0 & 0 \\
+        \vdots\\
+        0 & 0 & 0 & 0 & \cdots & 1 & X \\
+    \end{bmatrix} \quad \in \R^{N(K-1) \times (p+1)(K-1)}.
+\end{align*}
+I also define the enlarged output matrices:
+\begin{align*}
+    \tilde{y} =
+    \begin{bmatrix}
+        \mathds{1}_{y=1}\\
+        \mathds{1}_{y=2}\\
+        \vdots\\
+        \mathds{1}_{y=K-1}\\
+    \end{bmatrix} \quad \in \R^{N(K-1)},
+    \quad\text{and}\quad
+    \tilde{\Pr} =
+    \begin{bmatrix}
+        {\Pr}_{1}\\
+        {\Pr}_{2}\\
+        \vdots\\
+        {\Pr}_{K-1}\\
+    \end{bmatrix} \quad \in \R^{N(K-1)}.
+\end{align*}
+Then, the first derivative can be written as
+\begin{align*}
+    \frac{\partial L(\beta)}{\partial \beta} =
+    \tilde{X}^{T} (\tilde{y} - \tilde{\Pr})
+\end{align*}
+and the second derivative can be written as
+\begin{align*}
+    \frac{\partial^{2} L(\beta)}{\partial \beta \partial \beta^{T}} =
+    - \tilde{X}^{T} \tilde{W} \tilde{X},
+\end{align*}
+where $\tilde{W} \in \R^{N(K-1) \times N(K-1)}$ is given by
+\begin{align*}
+    \tilde{W} =
+    \begin{bmatrix}
+        \text{diag} ({\Pr}_{1} \odot (1 - {\Pr}_{1})) &
+        \text{diag} (- {\Pr}_{1} \odot {\Pr}_{2}) &
+        \cdots &
+        \text{diag} (- {\Pr}_{1} \odot {\Pr}_{K-1}) \\
+        \text{diag} (- {\Pr}_{2} \odot {\Pr}_{1}) &
+        \text{diag} ({\Pr}_{2} \odot (1 - {\Pr}_{2})) &
+        \cdots &
+        \text{diag} (- {\Pr}_{2} \odot {\Pr}_{K-1}) \\
+        \vdots \\
+        \text{diag} (- {\Pr}_{K-1} \odot {\Pr}_{1}) &
+        \text{diag} (- {\Pr}_{K-1} \odot {\Pr}_{2}) &
+        \cdots &
+        \text{diag} ({\Pr}_{K-1} \odot (1 - {\Pr}_{K-1}))
+    \end{bmatrix}.
+\end{align*}
+Here $\odot$ indicates the element-wise multiplication.
+
+Thus, a single Newton update\footnotemark is
+\begin{align*}
+    \beta^{\text{new}}
+    &= \beta^{\text{old}}
+    - {\left(\frac{\partial^{2} L(\beta)}{\partial \beta \partial \beta^{T}} \right)}^{-1}
+    \frac{\partial L(\beta)}{\partial \beta}
+    \\
+    &= \beta^{\text{old}}
+    + {\left( \tilde{X}^{T} \tilde{W} \tilde{X} \right)}^{-1} \tilde{X}^{T} (\tilde{y} - \tilde{\Pr})
+    \\
+    &=
+    {\left( \tilde{X}^{T} \tilde{W} \tilde{X} \right)}^{-1}
+    \tilde{X}^{T} \tilde{W}
+    \left(
+        \tilde{X} \beta^{\text{old}} + \tilde{W}^{-1} (\tilde{y} - \tilde{\Pr})
+    \right)
+\end{align*}
+Please note that when $K=2$, this update is identical to Equation 4.26 in the book.
+\footnotetext{see also
+
+    B\"{o}hning, D. (1992). Multinomial logistic regression algorithm. \textit{Annals of
+    the Institute of Statistical Mathematics}, 44, 197–200.
+    \texttt{https://www.ism.ac.jp/editsec/aism/pdf/044\_1\_0197.pdf}.
+
+    Hasan, A., Zhiyu, W., \& Mahani, A. S. (2014). Fast estimation of multinomial logit
+    models: R package mnlogit. arXiv:1404.3177 [stat.CO].
+    \texttt{https://arxiv.org/abs/1404.3177}.
+
+}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 4.5}{%
+
+    Consider a two-class logistic regression problem with $x \in \R$. Characterize the
+    maximum-likelihood estimates of the slope and intercept parameter if the sample
+    $x_{i}$ for the two classes are separated by a point $x_{0} \in \R$.  Generalize
+    this result to (a) $x \in \R^{p}$ (see Figure 4.16), and (b) more than two classes.
+
+}
+
+As the two classes are separated by a point $x_{0}$, without the loss of generalisation
+I can write
+\begin{align*}
+    y =
+    \begin{cases}
+        1 & \text{if } 0 < x_{0} - x \\
+        2 & \text{if } x_{0} - x < 0.
+    \end{cases}
+\end{align*}
+Now, let
+\begin{align*}
+    {\Pr}_{1}
+    = \frac{\exp\{\beta_{0} + \beta_{1} x\}}{1 + \exp\{\beta_{0} + \beta_{1} x\}}
+    \quad\text{and}\quad
+    {\Pr}_{2}
+    = \frac{1}{1 + \exp\{\beta_{0} + \beta_{1} x\}.}
+\end{align*}
+Then, at $a > 0$,
+\begin{align*}
+    \begin{cases}
+        \frac{\exp\{a x_{0} - a x\}}{1 + \exp\{a x_{0} - a x\}} > \frac{1}{1 + \exp\{a
+        x_{0} - a x\}}
+        \Leftrightarrow {\Pr}_{1} > {\Pr}_{2}
+        & \text{when } 0 < x_{0} - x \Leftrightarrow y = 1
+        \\
+        \frac{\exp\{a x_{0} - a x\}}{1 + \exp\{a x_{0} - a x\}} \leq \frac{1}{1 +
+        \exp\{a x_{0} - a x\}}
+        \Leftrightarrow {\Pr}_{1} < {\Pr}_{2}
+        & \text{when } x_{0} - x < 0 \Leftrightarrow y = 2.
+    \end{cases}
+\end{align*}
+Therefore, the logistic regression gives correct classification when $\beta_{0}=a x_{0}$
+and $\beta_{1} = -a$.
+
+Now, assume $N_{1} + N_{2}$ observations: $N_{1}$ with $x_{i} < x_{0}$ and $y=1$; and
+$N_{2}$ where $x_{j} > x_{0}$ and $y=2$. Then the log-likelihood is given by
+\begin{align*}
+    L
+    &=
+    \sum_{i=1}^{N_{1}}
+    \log\left\lbrack
+    \frac{\exp\{a x_{0} - a x_{i}\}}{1 + \exp\{a x_{0} - a x_{i}\}}
+    \right\rbrack
+    + \sum_{i=N_{1}+1}^{N_{1}+N_{2}}
+    \log\left\lbrack
+    \frac{1}{1 + \exp\{a x_{0} - a x_{i}\}}
+    \right\rbrack
+    \\
+    &=
+    \sum_{i=1}^{N_{1}}
+    \left\lbrack
+        a x_{0} - a x_{i}
+        - \log\left( 1 + \exp\{a x_{0} - a x_{i}\} \right)
+    \right\rbrack
+    - \sum_{i=N_{1}+1}^{N_{1}+N_{2}}
+        \log\left( 1 + \exp\{a x_{0} - a x_{i}\} \right)
+\end{align*}
+Its derivative with respect to $a$ is
+\begin{align*}
+    \frac{\partial L}{\partial a}
+    &=
+    \sum_{i=1}^{N_{1}}
+    \left\lbrack
+        x_{0} - x_{i}
+        - \frac{
+            (x_{0} - x_{i}) \exp\{a x_{0} - a x_{i}\}
+        }{
+            1 + \exp\{a x_{0} - a x_{i}\}
+        }
+    \right\rbrack
+    - \sum_{i=N_{1}+1}^{N_{1}+N_{2}}
+        \frac{
+            (x_{0} - x_{i}) \exp\{a x_{0} - a x_{i}\}
+        }{
+            1 + \exp\{a x_{0} - a x_{i}\}
+        }
+    \\
+    &=
+    \sum_{i=1}^{N_{1}}
+    \left\lbrack
+        \vert x_{0} - x_{i} \vert
+        \left(
+            1
+        - \frac{\exp\{a x_{0} - a x_{i}\}}{1 + \exp\{a x_{0} - a x_{i}\}}
+        \right)
+    \right\rbrack
+    + \sum_{i=N_{1}+1}^{N_{1}+N_{2}}
+    \left\lbrack
+        \vert x_{0} - x_{i} \vert
+        \frac{\exp\{a x_{0} - a x_{i}\}}{1 + \exp\{a x_{0} - a x_{i}\}}
+    \right\rbrack
+    \\
+    &> 0.
+\end{align*}
+Thus, as $a$ increases the log-likelihood monotonically increases. Here, the maximum
+likelihood estimate does not exist, and as $a$ approaches the infinity,
+\begin{align*}
+    \beta_{0} &\rightarrow
+    \begin{cases}
+        - \infty & \text{when } x_{0} < 0 \\
+        0 & \text{when } x_{0} = 0 \\
+        \infty & \text{when } x_{0} > 0
+    \end{cases}
+    \\
+    \beta_{1} &\rightarrow \infty.
+\end{align*}
+
+\vspace{1em}
+
+\noindent\textbf{(a)}
+
+In general, when two classes are separated by $x^{*} \in \R^{p}$, there exists a vector
+$\gamma$ which satisfies the followings:
+\begin{align*}
+    a x_{i} \gamma > 0 \quad \text{when } y_{i} = 1
+    \quad \text{and} \quad
+    a x_{i} \gamma < 0 \quad \text{when } y_{i} = 2
+\end{align*}
+with $a > 0$. In the earlier consideration where $x^{*} = x_{0} \in \R$, $\gamma =
+{[x_{0}, -1]}^{T}$.
+
+Then the derivative of log-likelihood with respect to $a$ is always positive.  Thus the
+maximum likelihood estimate does not exist, and the parameters are estimated to be zero
+or approaches to the positive or negative infinity. The derivation is essentially
+identical to the one given above.
+
+\vspace{1em}
+
+\noindent\textbf{(b)}
+
+When $K>2$ classes are separated, there exist vectors that satisfy
+\begin{align*}
+    a x_{i} \gamma^{(k)} > 0 \quad \text{when } y_{i} = k \quad \text{for } k = 1, 2, \dots, K-1.
+\end{align*}
+Then again, the derivative of log-likelihood with respect to $a$ is always positive. As
+the log-likelihood increases, the parameters stay at zero or approaches to the positive
+or negative infinity. The derivation is again essentially the same as the one above.
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 4.6}{%
+
+    Suppose we have $N$ points $x_{i}$ in $\R^{p}$ in general position, with class
+    labels $y_{i} \in \{-1, 1\}$. Prove that the perceptron learning algorithm converges
+    to a separating hyperplane in a finite number of steps:
+
+    \vspace{1em}
+
+    (a) Denote a hyperplane by $f(x) = \beta_{1}^{T} x + \beta_{0} = 0$, or in more
+    compact notation $\beta^{T} x^{*} = 0$, where $x^{*} = (x, 1)$ and $\beta =
+    (\beta_{1}, \beta_{0})$. Let $z_{i} = x^{*}_{i} / \Vert x^{*}_{i} \Vert$. Show that
+    separability implies the existence of a $\beta_{sep}$ such that $y_{i}
+    \beta_{sep}^{T} z_{i} \geq 1 \forall i$.
+
+    \vspace{1em}
+
+    (b) Given a current $\beta_{old}$, the perceptron algorithm identifies a point
+    $z_{i}$ that is misclassified, and produces the update $\beta_{new} \gets
+    \beta_{old} + y_{i} z_{i}$. Show that $\Vert \beta_{new} - \beta_{sep} \Vert^{2}
+    \leq \Vert \beta_{old} - \beta_{sep} \Vert^{2} - 1$, and hence that the algorithm
+    converges to a separating hyperplane in no more than $\Vert \beta_{start} -
+    \beta_{sep} \Vert^{2}$ steps (Ripley, 1996).
+
+}
+
+\noindent\textbf{(a)}
+
+The separability implies that
+\begin{align*}
+    \beta^{T} z_{i} > 0 \quad \textrm{if } y_{i} = 1
+    \quad \text{and} \quad
+    \beta^{T} z_{i} < 0 \quad \textrm{if } y_{i} = -1
+\end{align*}
+and thus,
+\begin{align*}
+    y_{i} \beta^{T} z_{i} > 0.
+\end{align*}
+Then, there exists $a \in \R$ such that
+\begin{align*}
+    y_{i} \beta^{T} z_{i} \geq a > 0.
+\end{align*}
+Therefore,
+\begin{align*}
+    y_{i} \frac{1}{a} \beta^{T} z_{i} \geq 1
+\end{align*}
+and by setting $\beta_{sep} = \frac{1}{a} \beta$, we obtain
+\begin{align*}
+    y_{i} \beta_{sep}^{T} z_{i} \geq 1.
+\end{align*}
+
+\vspace{1em}
+\noindent\textbf{(b)}
+
+From $\beta_{new} = \beta_{old} - y_{i} z_{i}$, we obtain
+\begin{align*}
+    \beta_{new} - \beta_{sep} = \beta_{old} - \beta_{sep} - y_{i} z_{i}.
+\end{align*}
+Then
+\begin{align*}
+    {(\beta_{new} - \beta_{sep})}^{T} (\beta_{new} - \beta_{sep})
+    &=
+    {(\beta_{old} - \beta_{sep} - y_{i} z_{i})}^{T} (\beta_{old} - \beta_{sep} - y_{i} z_{i})
+    \\
+    \Leftrightarrow
+    {\Vert \beta_{new} - \beta_{sep} \Vert}^{2}
+    &=
+    {(\beta_{old} - \beta_{sep})}^{T} (\beta_{old} - \beta_{sep})
+    - 2 y_{i} z_{i}^{T} (\beta_{old} - \beta_{sep})
+    + y_{i}^{2} z_{i}^{T} z_{i}
+    \\
+    \Leftrightarrow
+    {\Vert \beta_{new} - \beta_{sep} \Vert}^{2}
+    &=
+    {(\beta_{old} - \beta_{sep})}^{T} (\beta_{old} - \beta_{sep})
+    - 2 y_{i} {(\beta_{old} - \beta_{sep})}^{T} z_{i}
+    + 1
+\end{align*}
+because $y_{i} \in \{-1, 1\}$ and $z_{i}^{T} z_{i} = 1$.
+Now as $z_{i}$ is misclassified, we have $y_{i} \beta_{old}^{T} z_{i} < 0$ and
+from (a), we have $y_{i} \beta_{sep} z_{i} \geq 1$. Thus,
+\begin{align*}
+    y_{i} {(\beta_{old} - \beta_{sep})}^{T} z_{i}
+    &= y_{i} \beta_{old}^{T} z_{i} - y_{i} \beta_{sep}^{T} z_{i}
+    \geq 1.
+\end{align*}
+Therefore,
+\begin{align*}
+    {\Vert \beta_{new} - \beta_{sep} \Vert}^{2}
+    &=
+    {(\beta_{old} - \beta_{sep})}^{T} (\beta_{old} - \beta_{sep})
+    - 2 y_{i} {(\beta_{old} - \beta_{sep})}^{T} z_{i}
+    + 1\\
+    &\leq
+    {\Vert \beta_{old} - \beta_{sep} \Vert}^{2}
+    - 1.
+\end{align*}
+
+Now, because $0 \leq {\Vert \beta_{new} - \beta_{sep} \Vert}^{2}$, the algorithm has to
+converge in no more than ${\Vert \beta_{start} - \beta_{sep} \Vert}^{2}$ steps.
