@@ -1,4 +1,4 @@
-\section*{Chapter 4. Linear Methods for Classification}\label{sec:chapter_4_linear_methods_for_classification}
+\section{Chapter 4. Linear Methods for Classification}\label{sec:chapter_4_linear_methods_for_classification}
 \setcounter{table}{0}
 \renewcommand{\thetable}{C4.\arabic{table}}
 \setcounter{equation}{0}

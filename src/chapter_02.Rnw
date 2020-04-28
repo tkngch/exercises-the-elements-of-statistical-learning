@@ -1,4 +1,4 @@
-\section*{Chapter 2. Overview of Supervised Learning}\label{sec:chapter_2_overview_of_supervised_learning}
+\section{Chapter 2. Overview of Supervised Learning}\label{sec:chapter_2_overview_of_supervised_learning}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \exercise{Ex. 2.1}{%

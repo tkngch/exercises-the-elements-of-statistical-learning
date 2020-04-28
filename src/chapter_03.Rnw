@@ -1,4 +1,4 @@
-\section*{Chapter 3. Linear Methods for Regression}\label{sec:chapter_3_linear_methods_for_regression}
+\section{Chapter 3. Linear Methods for Regression}\label{sec:chapter_3_linear_methods_for_regression}
 \setcounter{table}{0}
 \renewcommand{\thetable}{C3.\arabic{table}}
 \setcounter{equation}{0}
