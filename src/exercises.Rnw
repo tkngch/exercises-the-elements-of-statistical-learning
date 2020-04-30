@@ -1,5 +1,6 @@
 \documentclass[11pt, a4paper]{article}
 
+\setcounter{tocdepth}{1} % Show sections
 \usepackage[margin=1.2in]{geometry}
 \usepackage{amsmath}
 \usepackage{amsfonts}
@@ -12,12 +13,6 @@
 \usepackage{placeins}  % FloatBarrier
 \usepackage{dsfont}  % mathds for indicator function
 \lstset{language=R, basicstyle=\small\ttfamily}
-
-% Package parskip sets \parindent to zero. So save the old value, loads parskip and restores
-% \parindent
-% \edef\restoreparindent{\parindent=\the\parindent\relax}
-% \usepackage{parskip}
-% \restoreparindent%
 
 \usepackage{color}
 \usepackage[most]{tcolorbox}
@@ -34,6 +29,7 @@
 }
 \newcommand{\R}{\rm {\displaystyle I\!R}}
 \DeclareMathOperator{\tr}{tr}
+\setcounter{secnumdepth}{0}  % remove the section numbering
 
 \title{Exercises in Elements of Statistical Learning by Hastie, Tibshirani, and Friedman (2009)}
 \author{Takao Noguchi\\tkngch@hotmail.com}
@@ -47,6 +43,8 @@
             Learning: Data Mining, Inference, and Prediction. Retrieved from \\
             \texttt{https://web.stanford.edu/\textasciitilde hastie/ElemStatLearn/}
     \end{itemize}
+
+    \tableofcontents
 
 <<setup, include=FALSE, cache=FALSE>>=
 library(knitr)
@@ -78,6 +76,10 @@ registerDoMC(cores=4)
 \clearpage
 
 <<chapter_04, child='chapter_04.Rnw'>>=
+@
+\clearpage
+
+<<chapter_07, child='chapter_07.Rnw'>>=
 @
 \clearpage
 

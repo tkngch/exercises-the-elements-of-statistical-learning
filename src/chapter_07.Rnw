@@ -1,0 +1,720 @@
+\section{Chapter 7. Model Assessment and Selection}\label{sec:chapter_7_model_assessment_and_selection}
+\setcounter{table}{0}
+\renewcommand{\thetable}{C7.\arabic{table}}
+\setcounter{equation}{0}
+\renewcommand{\theequation}{C7.\arabic{equation}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 7.1}{%
+
+    Derive the estimate of in-sample error (7.24).
+
+}
+
+Equation (7.24) is
+\begin{align*}
+    \mathbb{E}_{y} \left( \text{Err}_{\text{in}} \right)
+    =
+    \mathbb{E}_{y} \left( \overline{\text{err}} \right)
+    + 2 \frac{d}{N} \sigma^{2}_{\epsilon}
+\end{align*}
+for a linear additive error model: $f(X) = X \beta$ and $y = f(X) + \epsilon$.
+
+To derive this equation, I start with the expected optimism:
+\begin{align*}
+    \mathbb{E}_{y} \omega
+    &=
+    \mathbb{E}_{y} \left( \text{Err}_{\text{in}} \right)
+    - \mathbb{E}_{y} \left( \overline{\text{err}} \right)
+    \\
+    &=
+    \mathbb{E}_{y} \left(
+        \frac{1}{N} \sum_{i=1}^{N} \mathbb{E}_{y^{0}} \left\lbrack
+            L(y^{0}_{i}, \hat{f}(x_{i})) \right\rbrack
+    \right)
+    -
+    \mathbb{E}_{y} \left(
+        \frac{1}{N} \sum_{i=1}^{N} \left\lbrack
+            L(y_{i}, \hat{f}(x_{i})) \right\rbrack
+    \right)
+    \\
+    &=
+    \frac{1}{N} \sum_{i=1}^{N}
+    \left(
+        \mathbb{E}_{y}
+        \mathbb{E}_{y^{0}}
+            \left\lbrack L(y^{0}_{i}, \hat{f}(x_{i})) \right\rbrack
+        -
+        \mathbb{E}_{y}
+            \left\lbrack L(y_{i}, \hat{f}(x_{i})) \right\rbrack
+    \right)
+\end{align*}
+where $y^{0}$ indicates a new response value at the training point $x_{i}$ (page 228).
+
+For the squared loss function, the expected optimism is given by
+\begin{align*}
+    &
+    \frac{1}{N} \sum_{i=1}^{N}
+    \left(
+        \mathbb{E}_{y}
+        \mathbb{E}_{y^{0}}
+            \left\lbrack L(y^{0}_{i}, \hat{f}(x_{i})) \right\rbrack
+        -
+        \mathbb{E}_{y}
+            \left\lbrack L(y_{i}, \hat{f}(x_{i})) \right\rbrack
+    \right)
+    \\
+    &=
+    \frac{1}{N}
+    \left(
+        \mathbb{E}_{y}
+        \mathbb{E}_{y^{0}} \left\lbrack
+            {\left(y^{0} - \hat{y}\right)}^{T} {\left(y^{0} - \hat{y}\right)}
+        \right\rbrack
+        -
+        \mathbb{E}_{y} \left\lbrack
+            {\left(y - \hat{y}\right)}^{T} {\left(y - \hat{y}\right)}
+        \right\rbrack
+    \right)
+    \\
+    &=
+    \frac{1}{N}
+    \left(
+        \mathbb{E}_{y^{0}} \left\lbrack y^{0T} y^{0} \right\rbrack
+        -
+        2
+        \mathbb{E}_{y}
+        \mathbb{E}_{y^{0}} \left\lbrack y^{0T} \hat{y} \right\rbrack
+        +
+        \mathbb{E}_{y} \left\lbrack \hat{y}^{T} \hat{y} \right\rbrack
+        -
+        \mathbb{E}_{y} \left\lbrack y^{T} y \right\rbrack
+        +
+        2 \mathbb{E}_{y} \left\lbrack y^{T} \hat{y} \right\rbrack
+        -
+        \mathbb{E}_{y} \left\lbrack \hat{y}^{T} \hat{y} \right\rbrack
+    \right)
+    \\
+    &=
+    \frac{2}{N}
+    \left(
+        \mathbb{E}_{y} \left\lbrack y^{T} \hat{y} \right\rbrack
+        -
+        \mathbb{E}_{y}
+        \mathbb{E}_{y^{0}} \left\lbrack y^{0T} \hat{y} \right\rbrack
+    \right)
+    \\
+    &=
+    \frac{2}{N}
+    \left(
+        \mathbb{E}_{y} \left\lbrack y^{T} \hat{y} \right\rbrack
+        -
+        \mathbb{E}_{y} \mathbb{E}_{y^{0}} \left\lbrack y^{0T} \right\rbrack
+        \mathbb{E}_{y} \mathbb{E}_{y^{0}} \left\lbrack \hat{y} \right\rbrack
+    \right)
+    \\
+    &=
+    \frac{2}{N}
+    \left(
+        \mathbb{E}_{y} \left\lbrack y^{T} \hat{y} \right\rbrack
+        -
+        \mathbb{E}_{y^{0}} \left\lbrack y^{0T} \right\rbrack
+        \mathbb{E}_{y} \left\lbrack \hat{y} \right\rbrack
+    \right)
+    \\
+    &=
+    \frac{2}{N}
+    \left(
+        \mathbb{E}_{y} \left\lbrack y^{T} \hat{y} \right\rbrack
+        -
+        \mathbb{E}_{y} \left\lbrack y^{T} \right\rbrack
+        \mathbb{E}_{y} \left\lbrack \hat{y} \right\rbrack
+    \right)
+    \\
+    &=
+    \frac{2}{N} \sum_{i=1}^{N} \text{Cov}(\hat{y}_{i}, y_{i}),
+\end{align*}
+which proves Equations (7.21) and (7.22).
+
+Now, I assume the model is linear regression, where $\hat{y} = X (X^{T} X)^{-1} X^{T} y$
+and $\text{Cov}(y_{i}, y_{i}) = \sigma^{2}_{\epsilon}$ for all $i$. Then,
+\begin{align*}
+    \text{Cov}(\hat{y}, y)
+    &=
+    \text{Cov}(X (X^{T} X)^{-1} X^{T} y, y)
+    \\
+    &=
+    X (X^{T} X)^{-1} X^{T} \text{Cov}(y, y)
+    \\
+    &=
+    X (X^{T} X)^{-1} X^{T} \sigma^{2}_{\epsilon}.
+\end{align*}
+Thus,
+\begin{align*}
+    \frac{2}{N} \sum_{i=1}^{N} \text{Cov}(\hat{y}_{i}, y_{i})
+    &=
+    \frac{2}{N} \text{trace}( \text{Cov}(\hat{y}, y))
+    \\
+    &=
+    \frac{2}{N} \text{trace}(X (X^{T} X)^{-1} X^{T} \sigma^{2}_{\epsilon})
+    \\
+    &=
+    \frac{2}{N} \text{trace}(X (X^{T} X)^{-1} X^{T}) \sigma^{2}_{\epsilon}
+    \\
+    &=
+    \frac{2}{N} \text{trace}((X^{T} X)^{-1} X^{T} X) \sigma^{2}_{\epsilon}
+    \quad \because \text{the cyclic property of trace}
+    \\
+    &=
+    \frac{2}{N} \text{trace}(I_{d}) \sigma^{2}_{\epsilon}
+    \quad \because X \in \R^{N \times d}
+    \\
+    &=
+    \frac{2}{N} d \sigma^{2}_{\epsilon}.
+\end{align*}
+
+To summarise, the above derivation proves
+\begin{align*}
+    \mathbb{E}_{y} \left( \text{Err}_{\text{in}} \right)
+    - \mathbb{E}_{y} \left( \overline{\text{err}} \right)
+    =
+    \frac{2}{N} d \sigma^{2}_{\epsilon}
+\end{align*}
+and hence Equation (7.24) for a linear regression.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 7.2}{%
+
+    (a) For 0-1 loss with $Y \in \{0, 1\}$ and $\Pr(Y=1\vert x_{0}) = f(x_{0})$, show that
+    \begin{align*}
+        \text{Err}(x_{0})
+        &= \Pr(Y \neq \hat{G}(x_{0}) \vert X = x_{0})
+        \\
+        &=
+        \text{Err}_{B}(x_{0})
+        + \vert 2 f(x_{0}) - 1 \vert \Pr(\hat{G}(x_{0}) \neq G(x_{0}) \vert X = x_{0}),
+    \end{align*}
+    where $\hat{G}(x_{0}) = I(\hat{f}(x_{0}) > \frac{1}{2})$,
+    ${G}(x_{0}) = I({f}(x_{0}) > \frac{1}{2})$ is the Bayes classifier, and
+    $\text{Err}_{B}(x_{0}) = \Pr(Y \neq G(x_{0}) \vert X = x_{0})$, the irreducible
+    Bayes error at $x_{0}$.
+
+    \vspace{1em}
+
+    (b) Using the approximation $\hat{f}(x_{0}) \sim N(\mathbb{E} \hat{f}(x_{0}),
+    \text{Var} \hat{f}(x_{0}))$, show that
+    \begin{align*}
+        \Pr(\hat{G}(x_{0}) \neq G(x_{0}) \vert X = x_{0})
+        \approx
+        \Phi \left(
+            \frac{
+                \text{sign}(\frac{1}{2} - f(x_{0}))(\mathbb{E} \hat{f}(x_{0}) - \frac{1}{2})
+            }{
+                \sqrt{
+                    \text{Var}(\hat{f}(x_{0}))
+                }
+            }
+            \right).
+    \end{align*}
+    In the above,
+    \begin{align*}
+        \Phi(t) = \frac{1}{\sqrt{2 \pi}} \int_{-\infty}^{t} \exp(-t^{2} / 2) dt,
+    \end{align*}
+    the cumulative Gaussian distribution function. This is an increasing function, with
+    value 0 at $t=-\infty$ and value 1 and $t=\infty$.
+
+    \vspace{1em}
+
+    We can think of $\text{sign}(\frac{1}{2} - f(x_{0}))(\mathbb{E} \hat{f}(x_{0}) -
+    \frac{1}{2})$ as a kind of boundary-bias term, as it depends on the true $f(x_{0})$
+    only through which side of the boundary ($\frac{1}{2}$) that it lies. Notice also
+    that the bias and variance combine in a multiplicative rather than additive fashion.
+    If $\mathbb{E} \hat{f}(x_{0})$ is on the same side of $\frac{1}{2}$ as $f(x_{0})$,
+    then the bias is negative, and decreasing the variance will decrease the
+    misclassification error. On the other hand, if $\mathbb{E} \hat{f}(x_{0})$ is on the
+    opposite side of $\frac{1}{2}$ to $f(x_{0})$, then the bias is positive and it pays
+    to increase the variance! Such an increase will improve the chance that
+    $\hat{f}(x_{0})$ falls on the correct side of $\frac{1}{2}$ (Friedman, 1997).
+
+}
+
+\noindent\textbf{(a)}
+
+Note that
+\begin{align*}
+    & \text{Err}(x_{0})
+    \\
+    &=
+    \Pr(Y \neq \hat{G}(x_{0}) \vert X = x_{0})
+    \\
+    &=
+    \Pr(Y = 0 \vert X = x_{0})
+        \Pr(G(x_{0}) = 0 \vert X = x_{0})
+        \Pr(\hat{G}(x_{0}) = 1 \vert X = x_{0})
+    \\ &\quad +
+    \Pr(Y = 0 \vert X = x_{0})
+        \Pr(G(x_{0}) = 1 \vert X = x_{0})
+        \Pr(\hat{G}(x_{0}) = 1 \vert X = x_{0})
+    \\ &\quad +
+    \Pr(Y = 1 \vert X = x_{0})
+        \Pr(G(x_{0}) = 1 \vert X = x_{0})
+        \Pr(\hat{G}(x_{0}) = 0 \vert X = x_{0})
+    \\ &\quad +
+    \Pr(Y = 1 \vert X = x_{0})
+        \Pr(G(x_{0}) = 0 \vert X = x_{0})
+        \Pr(\hat{G}(x_{0}) = 0 \vert X = x_{0}).
+\end{align*}
+Now I consider the above derivation in two separate cases: when
+$f(x_{0}) > \frac{1}{2}$
+and when
+$f(x_{0}) < \frac{1}{2}$.
+
+When $f(x_{0}) > \frac{1}{2} \Leftrightarrow G(x_{0}) = 1$,
+\begin{align*}
+    &\text{Err}(x_{0})
+    \\
+    &=
+    \Pr(Y = 0 \vert X = x_{0})
+        \Pr(\hat{G}(x_{0}) = 1 \vert X = x_{0})
+    +
+    \Pr(Y = 1 \vert X = x_{0})
+        \Pr(\hat{G}(x_{0}) = 0 \vert X = x_{0})
+    \\
+    &=
+    (1 - f(x_{0}))
+        (1 - \Pr(\hat{G}(x_{0}) = 0 \vert X = x_{0}))
+    +
+    f(x_{0})
+        \Pr(\hat{G}(x_{0}) = 0 \vert X = x_{0})
+    \\
+    &=
+    1 - f(x_{0})
+    + (2 f(x_{0}) - 1) \Pr(\hat{G}(x_{0}) = 0 \vert X = x_{0})
+    \\
+    &=
+    \Pr(Y = 0 \vert X = x_{0})
+    + (2 f(x_{0}) - 1) \Pr(\hat{G}(x_{0}) = 0 \vert X = x_{0})
+    \\
+    &=
+    \Pr(Y \neq G(x_{0}) \vert X = x_{0})
+    + (2 f(x_{0}) - 1) \Pr(\hat{G}(x_{0}) \neq G(x_{0}) \vert X = x_{0})
+    \\
+    &=
+    \Pr(Y \neq G(x_{0}) \vert X = x_{0})
+    + \vert 2 f(x_{0}) - 1 \vert \Pr(\hat{G}(x_{0}) \neq G(x_{0}) \vert X = x_{0})
+    \\
+    &=
+    \text{Err}_{B}(x_{0})
+    + \vert 2 f(x_{0}) - 1 \vert \Pr(\hat{G}(x_{0}) \neq G(x_{0}) \vert X = x_{0})
+\end{align*}
+because $f(x_{0}) > \frac{1}{2}$.
+
+Similarly when $f(x_{0}) < \frac{1}{2} \Leftrightarrow G(x_{0}) = 0$,
+\begin{align*}
+    &\text{Err}(x_{0})
+    \\
+    &=
+    \Pr(Y = 0 \vert X = x_{0})
+        \Pr(\hat{G}(x_{0}) = 1 \vert X = x_{0})
+    +
+    \Pr(Y = 1 \vert X = x_{0})
+        \Pr(\hat{G}(x_{0}) = 0 \vert X = x_{0})
+    \\
+    &=
+    (1 - f(x_{0}))
+        \Pr(\hat{G}(x_{0}) = 1 \vert X = x_{0})
+    +
+    f(x_{0})
+        (1 - \Pr(\hat{G}(x_{0}) = 1 \vert X = x_{0}))
+    \\
+    &=
+    f(x_{0})
+    +
+    (1 - 2 f(x_{0}))
+        \Pr(\hat{G}(x_{0}) = 1 \vert X = x_{0})
+    \\
+    &=
+    \Pr(Y = 1 \vert X = x_{0})
+    +
+    (1 - 2 f(x_{0}))
+        \Pr(\hat{G}(x_{0}) = 1 \vert X = x_{0})
+    \\
+    &=
+    \Pr(Y \neq G(x_{0}) \vert X = x_{0})
+    +
+    (1 - 2 f(x_{0}))
+        \Pr(\hat{G}(x_{0}) \neq G(x_{0}) \vert X = x_{0})
+    \\
+    &=
+    \Pr(Y \neq G(x_{0}) \vert X = x_{0})
+    + \vert 2 f(x_{0}) - 1 \vert \Pr(\hat{G}(x_{0}) \neq G(x_{0}) \vert X = x_{0})
+    \\
+    &=
+    \text{Err}_{B}(x_{0})
+    + \vert 2 f(x_{0}) - 1 \vert \Pr(\hat{G}(x_{0}) \neq G(x_{0}) \vert X = x_{0})
+\end{align*}
+because $f(x_{0}) < \frac{1}{2}$.
+
+Therefore, $\text{Err}(x_{0}) = \text{Err}_{B}(x_{0}) + \vert 2 f(x_{0}) - 1 \vert
+\Pr(\hat{G}(x_{0}) \neq G(x_{0}) \vert X = x_{0})$.
+
+\noindent\textbf{(b)}
+
+When $f(x_{0}) > \frac{1}{2} \Leftrightarrow G(x_{0}) = 1$,
+\begin{align*}
+    \Pr(\hat{G}(x_{0}) \neq G(x_{0}) \vert X = x_{0})
+    &=
+    \Pr(\hat{G}(x_{0}) = 0 \vert X = x_{0})
+    \\
+    &=
+    \Pr\left(\hat{f}(x_{0}) < \frac{1}{2} \right)
+    \\
+    &=
+    \Pr\left(
+        \frac{\hat{f}(x_{0}) -\mathbb{E} \hat{f}(x_{0})}
+            {\sqrt{\text{Var}(\hat{f}(x_{0}))}}
+        <
+        \frac{\frac{1}{2} -\mathbb{E} \hat{f}(x_{0})}
+            {\sqrt{\text{Var}(\hat{f}(x_{0}))}}
+    \right)
+    \\
+    &\approx
+    \Phi \left(
+        \frac{
+            \frac{1}{2} - \mathbb{E} \hat{f}(x_{0})
+        }{
+            \sqrt{
+                \text{Var}(\hat{f}(x_{0}))
+            }
+        }
+        \right)
+    \\
+    &=
+    \Phi \left(
+        \frac{
+            \text{sign}(\frac{1}{2} - f(x_{0}))(\mathbb{E} \hat{f}(x_{0}) - \frac{1}{2})
+        }{
+            \sqrt{
+                \text{Var}(\hat{f}(x_{0}))
+            }
+        }
+        \right).
+\end{align*}
+
+Similarly when $f(x_{0}) < \frac{1}{2} \Leftrightarrow G(x_{0}) = 0$,
+\begin{align*}
+    \Pr(\hat{G}(x_{0}) \neq G(x_{0}) \vert X = x_{0})
+    &=
+    \Pr(\hat{G}(x_{0}) = 1 \vert X = x_{0})
+    \\
+    &=
+    \Pr\left(\hat{f}(x_{0}) > \frac{1}{2} \right)
+    \\
+    &=
+    \Pr\left(
+        \frac{\mathbb{E} \hat{f}(x_{0}) - \hat{f}(x_{0})}
+            {\sqrt{\text{Var}(\hat{f}(x_{0}))}}
+        <
+        \frac{\mathbb{E} \hat{f}(x_{0}) - \frac{1}{2}}
+            {\sqrt{\text{Var}(\hat{f}(x_{0}))}}
+    \right)
+    \\
+    &\approx
+    \Phi \left(
+        \frac{
+            \mathbb{E} \hat{f}(x_{0}) - \frac{1}{2}
+        }{
+            \sqrt{
+                \text{Var}(\hat{f}(x_{0}))
+            }
+        }
+        \right)
+    \\
+    &=
+    \Phi \left(
+        \frac{
+            \text{sign}(\frac{1}{2} - f(x_{0}))(\mathbb{E} \hat{f}(x_{0}) - \frac{1}{2})
+        }{
+            \sqrt{
+                \text{Var}(\hat{f}(x_{0}))
+            }
+        }
+        \right).
+\end{align*}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 7.4}{%
+
+    Consider the in-sample prediction error (7.18) and the training error err in the
+    case of squared-error loss:
+    \begin{align*}
+        \text{Err}_{in}
+        &= \frac{1}{N} \sum_{i=1}^{N}\mathbb{E}_{Y^{0}} {(Y^{0}_{i} - \hat{f}(x_{i}))}^{2}
+        \\
+        \overline{\text{err}}
+        &= \frac{1}{N} \sum_{i=1}^{N} {(y_{i} - \hat{f}(x_{i}))}^{2}.
+    \end{align*}
+    Add and subtract $f(x_{i})$ and $\mathbb{E}\hat{f}(x_{i})$ in each expression and
+    expand. Hence establish that the average optimism in the training error is
+    \begin{align*}
+        \frac{2}{N} \sum_{i=1}^{N} \text{Cov}(\hat{y}_{i}, y_{i})
+    \end{align*}
+    as given in (7.21).
+
+}
+
+This exercise is solved as part of Ex.\ 7.1 above.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 7.6}{%
+
+    Show that for an additive-error model, the effective degrees-of-freedom for the
+    $k$-nearest-neighbors regression fit is $N/k$.
+
+}
+
+The $k$-nearest-neighbors regression method can be written as
+\begin{align*}
+    \hat{y} = S y
+\end{align*}
+where $S$ is a $N \times N$ square matrix:
+\begin{align*}
+    S_{ij} =
+    \begin{cases}
+        1 / k & \text{if } x_{j} \text{ within the $k$ nearest neighbours of } x_{i}
+        \\
+        0 & \text{otherwise.}
+    \end{cases}
+\end{align*}
+Then, the effective degrees-of-freedom is given by
+\begin{align*}
+    \text{df}(S) = \text{trace}(S) = N / k
+\end{align*}
+(see equation (7.32) in page 232).
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 7.7}{%
+
+    Use the approximation $1/{(1-x)}^{2} \approx 1+2x$ to expose the relationship
+    between $C_{p}$ / AIC (7.26) and GCV (7.52), the main difference being the model used
+    to estimate the noise variance $\sigma_{\epsilon}^{2}$.
+
+}
+
+Equation (7.26) in page 230 defines $C_{p}$ statistic:
+\begin{align*}
+    C_{p} = \overline{\text{err}} + 2 \frac{d}{N} \hat{\sigma}_{\epsilon}^{2},
+\end{align*}
+where $\overline{\text{err}}$ indicates the training error:
+\begin{align*}
+    \overline{\text{err}} = \frac{1}{N} \sum_{i=1}^{N} L(y_{i}, \hat{f}(x_{i})).
+\end{align*}
+For Gaussian models, this $C_{p}$ statistics is equivalent to the AIC (page 231).
+
+Equation (7.52) in page 244 defines GCV (generalised cross-validation) approximation:
+\begin{align*}
+    GCV(\hat{f}) = \frac{1}{N} \sum_{i=1}^{N}
+    {\left\lbrack
+        \frac{y_{i} - \hat{f}(x_{i})}{1 - \text{trace}(S)/N}
+    \right\rbrack}^{2}
+\end{align*}
+where $S$ is a hat matrix.
+
+Using the approximation $1 / {(1 - \text{trace}(S) / N)}^{2} = 1 + 2 \text{trace}(S) /
+N$, the GCV is
+\begin{align*}
+    GCV(\hat{f})
+    &=
+    \frac{1}{N} \sum_{i=1}^{N}
+        {\left\lbrack
+            \frac{y_{i} - \hat{f}(x_{i})}{1 - \text{trace}(S)/N}
+        \right\rbrack}^{2}
+    \\
+    &\approx
+    \frac{1}{N} \sum_{i=1}^{N}
+        {\left\lbrack
+            {\left(y_{i} - \hat{f}(x_{i})\right)}^{2}
+            \left(1 + 2 \frac{\text{trace}(S)}{N} \right)
+        \right\rbrack}
+    \\
+    &=
+    \frac{1}{N} \sum_{i=1}^{N}
+        {\left(y_{i} - \hat{f}(x_{i})\right)}^{2}
+    +
+    2 \frac{\text{trace}(S)}{N}
+    \frac{1}{N} \sum_{i=1}^{N}
+        {\left(y_{i} - \hat{f}(x_{i})\right)}^{2}.
+\end{align*}
+Then assuming the squared loss function, we obtain
+\begin{align*}
+    GCV(\hat{f})
+    &=
+    \overline{\text{err}}
+    +
+    2 \frac{\text{trace}(S)}{N}
+    \frac{1}{N} \sum_{i=1}^{N}
+        {\left(y_{i} - \hat{f}(x_{i})\right)}^{2}.
+\end{align*}
+And assuming $\hat{f}$ is low-bias model, we obtain
+\begin{align*}
+    GCV(\hat{f})
+    &=
+    \overline{\text{err}}
+    +
+    2 \frac{\text{trace}(S)}{N}
+    \hat{\sigma}_{\epsilon}^{2}.
+\end{align*}
+
+Thus when $\text{trace}(S) = d$, for example a linear regression (see Ex.\ 7.1), the GCV
+is approximately equivalent to the $C_{p}$ statistic. The main difference is that in the
+GCV, the error variance $\sigma_{\epsilon}^{2}$ is estimated with the model being
+evaluated, while in the $C_{p}$, the error variance can be estimated with another model.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \exercise{Ex. 7.8}{%
+%
+%     Show that the set of functions $\{I(\sin(\alpha x) > 0)\}$ can shatter the following
+%     points on the line:
+%     \begin{align*}
+%         z^{1} = 10^{-1}, \dots, z^{l} = 10^{-l}
+%     \end{align*}
+%     for any $l$. Hence the VC dimension of the class $\{I(\sin(\alpha x) > 0)\}$ is
+%     infinite.
+%
+% }
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 7.9}{%
+
+    For the prostate data of Chapter 3, carry out a best-subset linear regression
+    analysis, as in Table 3.3 (third column from left). Compute the AIC, BIC, five- and
+    tenfold cross-validation, and bootstrap .632 estimates of prediction error. Discuss
+    the results.
+
+}
+
+<<echo=FALSE>>=
+fit_model <- function(training_data) {
+    lm(lpsa ~ lcavol + lweight, data=training_data)
+}
+
+calculate_errors <- function(fitted_model, test_data) {
+    prediction <- predict(fitted_model, test_data)
+    residuals <- test_data$lpsa - prediction
+    residuals ^ 2
+}
+
+calculate_error <- function(fitted_model, test_data) {
+    mean(calculate_errors(fitted_model, test_data))
+}
+
+cross_validate <- function(data, n_folds) {
+    data$fold <- rep(1:n_folds, length.out=nrow(data))
+    metrics <- sapply(
+        1:n_folds,
+        function(fold_index) {
+            fitted_model <- fit_model(subset(data, data$fold != fold_index))
+            calculate_error(fitted_model, subset(data, data$fold == fold_index))
+        }
+    )
+    mean(metrics)
+}
+
+bootstrap632 <- function(data, n_samples) {
+    n_rows <- nrow(data)
+    fitted_model <- fit_model(data)
+    training_error <- calculate_error(fitted_model, data)
+
+    sampled_indices <- do.call(
+        "cbind",
+        lapply(1:n_samples, function(b) { sample(1:n_rows, replace = TRUE) })
+    )
+    errors <- do.call(
+        "rbind",
+        lapply(
+            1:n_samples,
+            function(b) {
+                fit <- fit_model(data[sampled_indices[,b], ])
+                calculate_errors(fit, data)
+            }
+        )
+    )
+    stopifnot(nrow(errors) == n_samples)
+    stopifnot(ncol(errors) == n_rows)
+
+    estimated_errors <- sapply(
+        1:n_rows,
+        function(i) {
+            o <- apply(sampled_indices, 2, function(x, i){ sum(x == i) }, i)
+            n_exclusion_samples <- sum(o == 0)
+            if (n_exclusion_samples > 0) {
+                return(sum(errors[o == 0, i]) / n_exclusion_samples)
+            }
+            cat("Increase n_samples.", fill = TRUE)
+            NA
+        }
+    )
+    0.368 * training_error + 0.632 * mean(estimated_errors, na.rm = TRUE)
+}
+
+data <- read.table("../data/prostate.data", header=TRUE)
+data$lcavol <- scale(data$lcavol)
+data$lweight <- scale(data$lweight)
+train <- subset(data, data$train)
+n_rows <- nrow(train)
+
+fitted_model <- fit_model(train)
+n_parameters <- length(coef(fitted_model))
+sigma2 <- summary(fitted_model)$sigma ^ 2
+
+training_error <- calculate_error(fitted_model, train)
+# Test if the calculated statistic is not obviously wrong.
+stopifnot(abs(training_error - deviance(fitted_model) / n_rows) < 1e-4)
+
+aic <- training_error + 2 * (n_parameters / n_rows) * sigma2
+bic <- (n_rows / sigma2) * (
+    training_error + log(n_rows) * (n_parameters / n_rows) * sigma2
+)
+
+n_bootstrap_samples <- 100
+@
+
+For this exercise, I took the best-subset linear regression model from Table 3.3, and
+calculated the following statistics. The bootstrap .632 estimate is based on
+\Sexpr{n_bootstrap_samples} bootstrap samples.
+
+\begin{center}
+    \begin{tabular}{rr}
+        AIC & \Sexpr{round(aic, 3)} \\
+        BIC & \Sexpr{round(bic, 3)} \\
+        5-hold cross-validation & \Sexpr{round(cross_validate(train, 5), 3)} \\
+        10-hold cross-validation & \Sexpr{round(cross_validate(train, 10), 3)} \\
+        leave-one-out cross-validation & \Sexpr{round(cross_validate(train, nrow(train)), 3)} \\
+        bootstrap .632 estimate & \Sexpr{round(bootstrap632(train, n_bootstrap_samples), 3)}
+    \end{tabular}
+\end{center}
+
+Apart from BIC, all the statistics have somewhat similar values. Perhaps the most
+notable is the similarity between AIC and the leave-one-out cross-validation (LOO-CV).
+As discussed in Ex.\ 7.7, AIC and GCV, which approximates the LOO-CV, are closely
+related.  Thus the similarity between AIC and LOO-CV is confirmatory to Ex.\ 7.7 result.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \exercise{Ex. 7.10}{%
+%
+%     Referring to the example in Section 7.10.3, suppose instead that all of the $p$
+%     predictors are binary, and hence there is no need to estimate split points. The
+%     predictors are independent of the class labels as before.  Then if $p$ is very
+%     large, we can probably find a predictor that splits the entire training data
+%     perfectly, and hence would split the validation data (one-fifth of data) perfectly
+%     as well. This predictor would therefore have zero cross-validation error. Does this
+%     mean that cross-validation does not provide a good estimate of test error in this
+%     situation?  [This question was suggested by Li Ma.]
+%
+% }

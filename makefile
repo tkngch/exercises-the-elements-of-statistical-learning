@@ -18,6 +18,14 @@ data/spam.data:
 	mkdir -p $(@D)
 	wget "https://web.stanford.edu/~hastie/ElemStatLearn/datasets/spam.data" -O $@
 
+data/prostate.info.txt:
+	mkdir -p $(@D)
+	wget "https://web.stanford.edu/~hastie/ElemStatLearn/datasets/prostate.info.txt" -O $@
+
+data/prostate.data:
+	mkdir -p $(@D)
+	wget "https://web.stanford.edu/~hastie/ElemStatLearn/datasets/prostate.data" -O $@
+
 data/zip.info.txt:
 	mkdir -p $(@D)
 	wget "https://web.stanford.edu/~hastie/ElemStatLearn/datasets/zip.info.txt" -O $@
