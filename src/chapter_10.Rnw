@@ -1,0 +1,1324 @@
+\section{Chapter 10. Boosting and Additive Trees}\label{sec:chapter_10_boosting_and_additive_trees}
+\setcounter{table}{0}
+\renewcommand{\thetable}{C10.\arabic{table}}
+\setcounter{equation}{0}
+\renewcommand{\theequation}{C10.\arabic{equation}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 10.1}{%
+
+    Derive expression (10.12) for the update parameter in AdaBoost.
+
+}
+
+Expression (10.12) is the
+\begin{align*}
+    \beta_{m} = \frac{1}{2} \log \frac{1 - \text{err}_{m}}{\text{err}_{m}},
+\end{align*}
+where the error is given by
+\begin{align*}
+    \text{err}_{m} = \frac{\sum_{i=1}^{N} w_{i} I(y_{i} \neq G_{m}(x_{i}))}{\sum_{i=1}^{N} w_{i}}
+\end{align*}
+and the classifier is an additive model:
+\begin{align*}
+    f(x) = \sum_{m=1}^{M} \beta_{m} G_{m}(x).
+\end{align*}
+
+To obtain $\beta_{m}$ we need to solve
+\begin{align*}
+    \beta_{m}, G_{m}
+    = \arg \min_{\beta, G} \sum_{i=1}^{N} L(y_{i}, f_{m-1}(x_{i}) + \beta G(x_{i})).
+\end{align*}
+With the exponential loss $L(y, f(x)) = \exp(-y f(x))$, this minimisation can be
+expressed as
+\begin{align*}
+    \beta_{m}, G_{m}
+    &= \arg \min_{\beta, G} \sum_{i=1}^{N}
+        \exp\left(- y_{i} \lbrack f_{m-1}(x_{i}) + \beta G(x_{i}) \rbrack \right)
+    \\
+    &= \arg \min_{\beta, G} \sum_{i=1}^{N}
+        w^{(m)}_{i} \exp \left( -\beta y_{i} G(x_{i}) \right)
+\end{align*}
+with $w^{(m)}_{i} = \exp\left( -y_{i} f_{m-1}(x_{i}) \right)$.
+
+Now, note $y \in \{-1, 1\}$ and $G_{m}(x) \in \{-1, 1\}$, and thus,
+\begin{align*}
+    y_{i} G(x_{i}) =
+    \begin{cases}
+        1 & \text{if } y_{i} = G(x_{i}) \quad\Leftrightarrow\quad 1 - I(y_{i} \neq G(x_{i})) = 1 \\
+        -1 & \text{if } y_{i} \neq G(x_{i}) \quad\Leftrightarrow\quad I(y_{i} \neq G(x_{i})) = 1.
+    \end{cases}
+\end{align*}
+Then,
+\begin{align*}
+    \sum_{i=1}^{N}
+        w^{(m)}_{i} \exp \left( -\beta y_{i} G(x_{i}) \right)
+    &=
+    \sum_{i=1}^{N}
+        w^{(m)}_{i}
+        \left\lbrack
+            I(y_{i} = G(x_{i})) \exp( - \beta)
+            +
+            I(y_{i} \neq G(x_{i})) \exp(\beta)
+        \right\rbrack
+    \\
+    &=
+    \left( \exp(\beta) - \exp(-\beta) \right)
+        \sum_{i=1}^{N} w^{(m)}_{i} I(y_{i} \neq G(x_{i}))
+    +
+    \exp(-\beta)
+        \sum_{i=1}^{N} w^{(m)}_{i}.
+\end{align*}
+By differentiating the above with respect to $\beta$ and equating it to zero, we obtain
+\begin{align*}
+    & 0 =
+    \frac{\partial}{\partial \beta_{m}}
+        \left\lbrack
+        \sum_{i=1}^{N}
+            w^{(m)}_{i} \exp \left( -\beta_{m} y_{i} G(x_{i}) \right)
+        \right\rbrack
+    \\
+    &\Leftrightarrow
+    0 =
+    \beta_{m} \left( \exp(\beta_{m}) + \exp(-\beta_{m}) \right)
+        \sum_{i=1}^{N} w^{(m)}_{i} I(y_{i} \neq G(x_{i}))
+    -
+    \beta_{m} \exp(-\beta_{m})
+        \sum_{i=1}^{N} w^{(m)}_{i}
+    \\
+    &\Leftrightarrow
+    0 =
+    \left( \exp(\beta_{m}) + \exp(-\beta_{m}) \right)
+        \sum_{i=1}^{N} w^{(m)}_{i} I(y_{i} \neq G(x_{i}))
+    -
+    \exp(-\beta_{m})
+        \sum_{i=1}^{N} w^{(m)}_{i}
+    \quad \because \beta_{m} \neq 0
+    \\
+    &\Leftrightarrow
+    0 =
+    \exp(\beta_{m})
+    \left( \exp(\beta_{m}) + \exp(-\beta_{m}) \right)
+        \sum_{i=1}^{N} w^{(m)}_{i} I(y_{i} \neq G(x_{i}))
+    -
+    \exp(\beta_{m})
+    \exp(-\beta_{m})
+        \sum_{i=1}^{N} w^{(m)}_{i}
+    \\& \quad \quad \quad \quad \because \exp(\beta_{m}) \neq 0
+    \\
+    &\Leftrightarrow
+    0 =
+    \left( \exp(2\beta_{m}) + 1 \right)
+        \sum_{i=1}^{N} w^{(m)}_{i} I(y_{i} \neq G(x_{i}))
+    -
+        \sum_{i=1}^{N} w^{(m)}_{i}
+    \\
+    &\Leftrightarrow
+    \exp(2\beta_{m}) + 1
+    =
+    \frac{\sum_{i=1}^{N} w^{(m)}_{i}}{%
+        \sum_{i=1}^{N} w^{(m)}_{i} I(y_{i} \neq G(x_{i}))
+    }
+    \\
+    &\Leftrightarrow
+    \exp(2\beta_{m}) + 1 = \frac{1}{\text{err}_{m}}
+    \\
+    &\Leftrightarrow
+    \exp(2\beta_{m}) = \frac{1 - \text{err}_{m}}{\text{err}_{m}}
+    \\
+    &\Leftrightarrow
+    \beta_{m} = \frac{1}{2} \log \frac{1 - \text{err}_{m}}{\text{err}_{m}}
+\end{align*}
+which is Expression (10.12).
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 10.2}{%
+
+    Prove result (10.16), that is, the minimizer of the population version of AdaBoost
+    criterion, is one-half of the log odds.
+
+}
+
+Result (10.16) is
+\begin{align*}
+    f^{*}(x) = \arg \min_{f(x)} \mathbb{E}_{Y \vert x} \left(e^{-Yf(x)}\right)
+    = \frac{1}{2} \log \frac{\Pr(Y = 1 \vert x)}{\Pr(Y = -1 \vert x).}
+\end{align*}
+
+To prove this, I first note that
+\begin{align*}
+    \mathbb{E}_{Y \vert x} \left(e^{-Yf(x)}\right)
+    = \Pr(Y=1\vert x)\, e^{-f(x)} + \Pr(Y=-1\vert x)\, e^{f(x)}.
+\end{align*}
+Then,
+\begin{align*}
+    \frac{\partial}{\partial f(x)}
+        \mathbb{E}_{Y \vert x} \left(e^{-Yf(x)}\right)
+    = - \Pr(Y=1\vert x)\, e^{-f(x)} + \Pr(Y=-1\vert x)\, e^{f(x)}.
+\end{align*}
+Thus by assuming the convexity of the expectation with respect to $f(x)$, I obtain
+\begin{align*}
+    &
+    0 =
+    \frac{\partial}{\partial f^{*}(x)}
+        \mathbb{E}_{Y \vert x} \left(e^{-Yf^{*}(x)}\right)
+    \\
+    &\Leftrightarrow
+    0 =
+    - \Pr(Y=1\vert x)\, e^{-f^{*}(x)} + \Pr(Y=-1\vert x)\, e^{f^{*}(x)}
+    \\
+    &\Leftrightarrow
+    \Pr(Y=1\vert x)\, e^{-f^{*}(x)} = \Pr(Y=-1\vert x)\, e^{f^{*}(x)}
+    \\
+    &\Leftrightarrow
+    \log \Pr(Y=1\vert x) - f^{*}(x) = \log \Pr(Y=-1\vert x) + f^{*}(x)
+    \\
+    &\Leftrightarrow
+    f^{*}(x) = \frac{1}{2} \left(\log \Pr(Y=1\vert x) - \log \Pr(Y=-1\vert x)\right)
+    \\
+    &\Leftrightarrow
+    f^{*}(x) = \frac{1}{2} \log \frac{\Pr(Y=1\vert x)}{\Pr(Y=-1\vert x)}
+\end{align*}
+which proves result (10.16).
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 10.3}{%
+
+    Show that the marginal average (10.47) recovers additive and multiplicative
+    functions (10.50) and (10.51), while the conditional expectation (10.49) does not.
+
+}
+
+Here, we consider the subvector $X$ of $l < p$ of the input predictor variables $X^{T} =
+(X_{1}, X_{2}, \dots, X_{p})$, indexed by $S \subset \{1, 2, \dots, p\}$, and also let
+$C$ the complement set, with $S \cup C = \{1, 2, \dots, p\}$. Then, equation (10.47)
+expresses the marginal average as follows:
+\begin{align*}
+    \bar{f}_{S}(X_{S}) = \frac{1}{N} \sum_{i=1}^{N} f(X_{S}, x_{iC}),
+\end{align*}
+where $\{x_{1C}, x_{2C}, \dots, x_{NC}\}$ are the values of $X_{C}$ occurring in the
+training data. In contrast, the conditional expectation is given by equation (10.49):
+\begin{align*}
+    \tilde{f}_{S}(X_{S}) = \mathbb{E}(f(X_{S}, X_{C}) \vert X_{S}).
+\end{align*}
+
+One of the key differences between the marginal average and the conditional expectation
+is that, while the marginal average accounts for all the values of $X_{C}$ in the
+training data, the conditional expectation accounts for only the subset of $X_{C}$ in
+the training data.
+
+To illustrate, consider $\tilde{f}_{S}(x_{1S})$, assuming $x_{1S} = x_{iS} \text{ for }
+i = 2, \dots, q$ and $x_{1S} \neq x_{jS} \text{ for } j = q + 1, \dots, N$. To calculate
+the conditional expectation, we select the subset of $X_{C}$ that was observed with
+the same value of $x_{1S}$ in $X_{S}$: $\{ x_{1S}, x_{2S}, \dots, x_{qS}\}$. We then
+take the average value of $f$:
+\begin{align*}
+    \tilde{f}(x_{1S}) = \frac{1}{q} \sum_{i=1}^{q} f(x_{iS}, x_{iC}).
+\end{align*}
+
+Now, to answer the exercise question, we consider the additive function, where $f(X) =
+h_{1}(X_{S}) + h_{2}(X_{C})$. Then,
+\begin{align*}
+    \bar{f}_{S}(X_{S}) &= \frac{1}{N} \sum_{i=1}^{N} f(X_{S}, x_{iC})
+                    \\ &= \frac{1}{N} \sum_{i=1}^{N} h_{1}(X_{S}) + h_{2}(x_{iC})
+                    \\ &= h_{1}(X_{S}) + \frac{1}{N} \sum_{i=1}^{N} h_{2}(x_{iC})
+                    \\ &= h_{1}(X_{S}) + a,
+\end{align*}
+where $a$ is independent of $X_{S}$ and can be considered to be a constant. Thus,
+the marginal average recovers the additive function up to an additive constant.
+On the other hand,
+\begin{align*}
+    \tilde{f}_{S}(X_{S}) &= \mathbb{E}(f(X_{S}, X_{C}) \vert X_{S})
+                      \\ &= \mathbb{E}(h_{1}(X_{S}) + h_{2}(X_{C}) \vert X_{S})
+                      \\ &= h_{1}(X_{S}) + \mathbb{E}(h_{2}(X_{C}) \vert X_{S})
+                      \\ &= h_{1}(X_{S}) + g(X_{S}, X_{C}),
+\end{align*}
+where $g$ depends on $X_{S}$ and cannot be considered to be a constant.  Thus, the
+conditional expectation does not recover the additive function.
+
+Similarly with the multiplicative function $f(X) = h_{1}(X_{S})\, h_{2}(X_{C})$,
+\begin{align*}
+    \bar{f}_{S}(X_{S}) &= \frac{1}{N} \sum_{i=1}^{N} f(X_{S}, x_{iC})
+                    \\ &= \frac{1}{N} \sum_{i=1}^{N} h_{1}(X_{S}) h_{2}(x_{iC})
+                    \\ &= h_{1}(X_{S}) \frac{1}{N} \sum_{i=1}^{N} h_{2}(x_{iC})
+                    \\ &= h_{1}(X_{S}) \, a.
+\end{align*}
+As $a$ is a constant, the marginal average recovers the multiplicative function to to a
+multiplicative constant.  On the other hand,
+\begin{align*}
+    \tilde{f}_{S}(X_{S}) &= \mathbb{E}(f(X_{S}, X_{C}) \vert X_{S})
+                      \\ &= \mathbb{E}(h_{1}(X_{S}) h_{2}(X_{C}) \vert X_{S})
+                      \\ &= h_{1}(X_{S}) \mathbb{E}(h_{2}(X_{C}) \vert X_{S}).
+                      \\ &= h_{1}(X_{S}) g(X_{S}, X_{C})
+\end{align*}
+As $g$ is not a constant, the conditional expectation does not recover the
+multiplicative function.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 10.4}{%
+
+    (a) Write a program implementing AdaBoost with trees.
+
+    \vspace{1em}
+
+    (b) Redo the computations for the example of Figure 10.2. Plot the training error as
+    well as test error, and discuss its behavior.
+
+    \vspace{1em}
+
+    (c) Investigate the number of iterations needed to make the test error finally start
+    to rise.
+
+    \vspace{1em}
+
+    (d) Change the setup of this example as follows: define two classes, with the
+    features in Class 1 being $X_{1}, X_{2}, \dots, X_{10}$, standard independent
+    Gaussian variates. In Class 2, the features $X_{1}, X_{2}, \dots, X_{10}$ are also
+    independent Gaussian, but conditioned on the event $\sum_{j} X^{2}_{j} > 12$.  Now
+    the classes have significant overlap in feature space.  Repeat the AdaBoost
+    experiments as in Figure 10.2 and discuss the results.
+
+}
+
+\noindent\textbf{(a)}
+
+I use the R package, ``gbm''.
+
+\vspace{1em}
+
+\noindent\textbf{(b)} and \textbf{(c)}
+
+I have tested up to 1,000 boosting iterations (the main text examined up to 400
+iterations), and both training and test errors decreased. See the figure below.
+
+<<echo=FALSE, fig.width=5, fig.height=2.2>>=
+generate_data <- function(n_samples) {
+    n_dimensions <- 10
+    X <- matrix(rnorm(n_samples * n_dimensions), nrow = n_samples, ncol = n_dimensions)
+    y <- ifelse(rowSums(X^2) > 9.34, 1, 0)
+    stopifnot(setequal(unique(y), c(0, 1)))
+    data.frame(y, X)
+}
+
+n_training <- 2000
+n_testing <- 10000
+data <- generate_data(n_training + n_testing)
+
+n_iterations <- 1000
+
+fm <- gbm(y ~ ., data = data, distribution = "adaboost", n.trees = n_iterations,
+          train.fraction = (n_training / (n_training + n_testing)))
+
+error <- data.frame(
+    iterations = rep(1:n_iterations, 2),
+    metric = rep(c("Training error", "Test error"), rep(n_iterations, 2)),
+    error = c(fm$train.error, fm$valid.error))
+
+ggplot(error, aes(x = iterations, y = error, group = metric, color = metric)) +
+    geom_line() +
+    scale_x_continuous(name = "Iterations") +
+    scale_y_continuous(name = "Error") +
+    scale_color_discrete(name = "Metric")
+@
+
+\vspace{1em}
+
+\noindent\textbf{(d)}
+
+When the two classes have significant overlap in feature space, the AdaBoost shows the
+sign of over-fitting. After about 300 boosting iterations, the test error starts to
+increase while the training error continues to descrease. See the figure below.
+
+<<echo=FALSE, fig.width=5, fig.height=2.2>>=
+generate_data <- function(n_samples) {
+    n_samples_class1 <- round(n_samples / 2)
+    n_samples_class2 <- n_samples - n_samples_class1
+    y <- rep(c(0, 1), c(n_samples_class1, n_samples_class2))
+
+    n_dimensions <- 10
+    X_class1 <- matrix(
+        rnorm(n_samples_class1 * n_dimensions),
+        nrow = n_samples_class1, ncol = n_dimensions)
+
+    iter <- 0
+    X_class2 <- matrix(0, nrow = n_samples_class2, ncol = n_dimensions)
+    repeat {
+        good_rows <- rowSums(X_class2^2) > 12
+        if (all(good_rows)) {
+            break
+        }
+        X_class2[!good_rows] <- rnorm(sum(!good_rows) * n_dimensions)
+
+        iter <- iter + 1
+        if (iter > 100) {
+            stop("Error")
+        }
+    }
+    # Shuffle rows.
+    data <- data.frame(y, rbind(X_class1, X_class2))
+    data[sample(nrow(data)), ]
+}
+
+n_training <- 2000
+n_testing <- 10000
+data <- generate_data(n_training + n_testing)
+
+n_iterations <- 1000
+
+fm <- gbm(y ~ ., data = data, distribution = "adaboost", n.trees = n_iterations,
+          train.fraction = (n_training / (n_training + n_testing)))
+
+error <- data.frame(
+    iterations = rep(1:n_iterations, 2),
+    metric = rep(c("Training error", "Test error"), rep(n_iterations, 2)),
+    error = c(fm$train.error, fm$valid.error))
+
+ggplot(error, aes(x = iterations, y = error, group = metric, color = metric)) +
+    geom_line() +
+    scale_x_continuous(name = "Iterations") +
+    scale_y_continuous(name = "Error") +
+    scale_color_discrete(name = "Metric")
+@
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 10.5}{%
+
+    \textit{Multiclass exponential loss} (Zhu et al., 2005). For a K-class
+    classification problem, consider the coding $Y = (Y_{1}, \dots, Y_{K})^{T}$ with
+    \begin{align*}
+        Y_{k} = \begin{cases}
+            1 & \text{if } G = \mathcal{G}_{k} \\
+            - \frac{1}{K-1} & \text{otherwise.}
+        \end{cases}
+    \end{align*}
+    Let $f = (f_{1}, \dots, f_{K})^{T}$ with $\sum_{k=1}^{K} f_{k} = 0$, and define
+    \begin{align*}
+        L(Y, f) = \exp\left( - \frac{1}{K} Y^{T} f \right).
+    \end{align*}
+
+    \vspace{1em}
+
+    (a) Using Lagrange multipliers, derive the population minimizer $f^{*}$ of $L(Y,
+    f)$, subject to the zero-sum constraint, and relate these to the class
+    probabilities.
+
+    \vspace{1em}
+
+    (b) Show that a multiclass boosting using this loss function leads to a reweighting
+    algorithm similar to Adaboost, as in Section 10.4.
+
+}
+
+\noindent\textbf{(a)}
+
+The population minimizer is given by
+\begin{align*}
+    f^{*} = \arg \min_{f} \mathbb{E}_{Y} L(Y, f)
+    \quad \text{subject to } \sum_{k=1}^{K} f_{k} = 0.
+\end{align*}
+The equivalent Lagrangeian form is
+\begin{align*}
+    f^{*} = &\arg \min_{f} \mathbb{E}_{Y} L(Y, f) + \lambda \sum_{k=1}^{K} f_{k}.
+\end{align*}
+
+To derive the population minimizer, let me first consider the loss function. Without the
+loss of generality, I assume $G = G_{j}$.
+\begin{align*}
+    L(Y, f)
+    &= \exp\left( - \frac{1}{K} Y^{T} f \right)
+    \\
+    &= \exp\left( - \frac{1}{K} \sum_{k=1}^{K} Y_{j} f_{j} \right)
+    \\
+    &= \exp\left(
+        - \frac{1}{K}
+        \left\lbrack
+            - \frac{K}{K-1} \sum_{k=1}^{K} f_{j}
+            + \left(\frac{1}{K-1} + 1\right) f_{j}
+        \right\rbrack
+    \right)
+    \\
+    &= \exp\left(
+        - \frac{1}{K}
+        \left\lbrack
+            \frac{K}{K-1} f_{j}
+        \right\rbrack
+    \right)
+    \\
+    &= \exp\left( - \frac{1}{K-1} f_{j} \right).
+\end{align*}
+Then, its expectation is given by
+\begin{align*}
+    \mathbb{E}_{Y} L(Y, f) =
+    \sum_{k=1}^{K} \Pr(G = \mathcal{G}_{k}) \exp\left( - \frac{1}{K-1} f_{k} \right).
+\end{align*}
+Therefore, the derivative of Lagrangeian function can be written as
+\begin{align*}
+    \frac{\partial}{\partial f_{k}} \left\lbrack
+        \mathbb{E}_{Y} L(Y, f) + \lambda \sum_{k=1}^{K} f_{k}
+        \right\rbrack
+        = - \frac{\Pr(G = \mathcal{G}_{k})}{K - 1} \exp\left( - \frac{1}{K-1} f_{k} \right) + \lambda.
+\end{align*}
+Setting the derivative to zero, we obtain
+\begin{align*}
+    &
+    \frac{\partial}{\partial f^{*}_{k}} \left\lbrack
+        \mathbb{E}_{Y} L(Y, f) + \lambda \sum_{k=1}^{K} f^{*}_{k}
+        \right\rbrack = 0
+    \\
+    &\Leftrightarrow
+    \frac{\Pr(G = \mathcal{G}_{k})}{K - 1} \exp\left( - \frac{1}{K-1} f^{*}_{k} \right) = \lambda
+    \\
+    &\Leftrightarrow
+    \exp\left( - \frac{1}{K-1} f^{*}_{k} \right) = \lambda \frac{K - 1}{\Pr(G = \mathcal{G}_{k})}
+    \\
+    &\Leftrightarrow
+    - \frac{1}{K-1} f^{*}_{k} = \log \lambda + \log (K - 1) - \log \Pr(G = \mathcal{G}_{k})
+    \\
+    &\Leftrightarrow
+    f^{*}_{k} =  \left\lbrack
+    \log \Pr(G = \mathcal{G}_{k}) - \log \lambda - \log (K - 1)
+        \right\rbrack (K - 1).
+\end{align*}
+Now recall $\sum_{k} f^{*}_{k} = 0$. Thus,
+\begin{align*}
+    &\sum_{k=1}^{K}
+        \left\lbrack
+        \log \Pr(G = \mathcal{G}_{k}) - \log \lambda - \log (K - 1)
+        \right\rbrack (K - 1)
+    = 0
+    \\
+    &\Leftrightarrow
+    \sum_{k=1}^{K}
+        \left\lbrack
+        \log \Pr(G = \mathcal{G}_{k}) - \log \lambda - \log (K - 1)
+        \right\rbrack
+    = 0
+    \\
+    &\Leftrightarrow
+    \sum_{k=1}^{K} \log \Pr(G = \mathcal{G}_{k})
+        = K \left(\log \lambda + \log (K - 1) \right).
+\end{align*}
+Plugging in to the earlier equation, we get
+\begin{align*}
+    f^{*}_{k} =  \left\lbrack
+    \log \Pr(G = \mathcal{G}_{k}) - \frac{1}{K} \sum_{k=1}^{K} \log \Pr(G = \mathcal{G}_{k})
+        \right\rbrack (K - 1).
+\end{align*}
+Finally I note
+\begin{align*}
+    \arg \max_{k} f^{*}_{k} = \arg \max_{k} \Pr(G = \mathcal{G}_{k}).
+\end{align*}
+
+\vspace{1em}
+
+\noindent\textbf{(b)}
+
+For a multiclass boosting, the basis functions are the individual classifiers $f^{(m)}$
+where $\sum_{k=1}^{K} f^{(m)}_{k} = 0$:
+\begin{align*}
+    g^{(m)}(x) = \sum_{m=1}^{M} \beta_{m} f^{(m)}(x)
+\end{align*}
+In this exercise, we solve
+\begin{align*}
+    \beta_{m}, f^{(m)} = \arg \min_{\beta, f}
+    \sum_{i=1}^{N} L\left(Y^{(i)},\, g^{(m-1)} + \beta f(x_{i}) \right).
+\end{align*}
+
+Letting $w^{(m)}_{i} = L\left(Y^{(i)},\, g^{(m-1)}(x_{i}) \right)$, we have
+\begin{align*}
+    \sum_{i=1}^{N} L\left(Y^{(i)},\, g^{(m-1)}(x_{i}) + \beta f(x_{i}) \right)
+    &= \sum_{i=1}^{N} w^{(m)}_{i} L\left(Y^{(i)},\, \beta f(x_{i}) \right)
+    \\
+    &=
+    \sum_{i=1}^{N} w^{(m)}_{i} \exp\left( - \frac{1}{K} Y^{(i)T} \beta f(x_{i}) \right).
+\end{align*}
+
+Now, following Zhu et al.\ (2005).\footnote{
+    Zhu, J., Zou, H., Rosset, S., \& Hastie, T. (2009). Multi-class adaboost.
+    \textit{Statistics and Its Interface, 2}(3), 349-360.
+}, I define
+\begin{align*}
+    f(x_{i})_{k} =
+    \begin{cases}
+        1 & \text{if } \mathcal{G}_{k} \text{ is predicted: } \hat{G}^{(i)} =
+        \mathcal{G}^{(i)}_{k} \\
+        - \frac{1}{K-1} & \text{otherwise.}
+    \end{cases}
+\end{align*}
+Then,
+\begin{align*}
+    &\sum_{i=1}^{N} w^{(m)}_{i} \exp\left( - \frac{1}{K} Y^{(i)T} \beta f(x_{i}) \right)
+    \\
+    &=
+    \sum_{i=1}^{N} w^{(m)}_{i}
+        \left\lbrack
+            \exp\left(\frac{- \beta}{K-1} \right) I\left(\hat{G}^{(i)} = G^{(i)}\right)
+            + \exp\left(\frac{\beta}{{(K-1)}^{2}} \right) I\left(\hat{G}^{(i)} \neq G^{(i)}\right)
+        \right\rbrack
+    \\
+    &=
+    \sum_{i=1}^{N} w^{(m)}_{i}
+        \left\lbrack
+            \exp\left(\frac{- \beta}{K-1} \right)
+                \left(1 - I\left(\hat{G}^{(i)} \neq G^{(i)}\right) \right)
+            + \exp\left(\frac{\beta}{{(K-1)}^{2}} \right)
+                I\left(\hat{G}^{(i)} \neq G^{(i)}\right)
+        \right\rbrack
+    \\
+    &=
+    \sum_{i=1}^{N} w^{(m)}_{i}
+        \left\lbrack
+            \exp\left(\frac{- \beta}{K-1} \right)
+                \left(1 - I\left(\hat{G}^{(i)} \neq G^{(i)}\right) \right)
+            + \exp\left(\frac{\beta}{{(K-1)}^{2}} \right)
+                I\left(\hat{G}^{(i)} \neq G^{(i)}\right)
+        \right\rbrack
+    \\
+    &=
+    \sum_{i=1}^{N} w^{(m)}_{i}
+        \left\lbrack
+            \exp\left(\frac{- \beta}{K-1} \right)
+            +
+            \left\lbrack
+                \exp\left(\frac{\beta}{{(K-1)}^{2}} \right)
+                - \exp\left(\frac{- \beta}{K-1} \right)
+            \right\rbrack
+                I\left(\hat{G}^{(i)} \neq G^{(i)}\right)
+        \right\rbrack.
+\end{align*}
+
+Now the error is defined as follows:
+\begin{align*}
+    \text{err}_{m} = \frac{
+        \sum_{i=1}^{N} w^{(m)}_{i} I\left(\hat{G}^{(i)} \neq G^{(i)}\right)
+    }{
+        \sum_{i=1}^{N} w^{(m)}_{i}.
+    }
+\end{align*}
+Then by setting the derivative of the minimisation function to zero, I get
+\begin{align*}
+    & 0 =
+    \frac{\partial}{\partial \beta_{m}}
+    \sum_{i=1}^{N} L\left(Y^{(i)},\, g^{(m-1)} + \beta_{m} f(x_{i}) \right)
+    \\
+    & \Leftrightarrow 0 =
+    \frac{\partial}{\partial \beta_{m}}
+    \sum_{i=1}^{N} w^{(m)}_{i}
+        \left\lbrack
+            \exp\left(\frac{- \beta_{m}}{K-1} \right)
+            +
+            \left\lbrack
+                \exp\left(\frac{\beta_{m}}{{(K-1)}^{2}} \right)
+                - \exp\left(\frac{- \beta_{m}}{K-1} \right)
+            \right\rbrack
+                I\left(\hat{G}^{(i)} \neq G^{(i)}\right)
+        \right\rbrack
+    \\
+    & \Leftrightarrow 0 =
+    - \frac{\beta_{m}}{K-1} \exp\left(\frac{- \beta_{m}}{K-1} \right)
+        \sum_{i=1}^{N} w^{(m)}_{i}
+    \\
+    & \quad \quad
+    + \left\lbrack
+        \frac{\beta_{m}}{{(K-1)}^{2}} \exp\left(\frac{\beta_{m}}{{(K-1)}^{2}} \right)
+        + \frac{\beta_{m}}{K-1} \exp\left(\frac{- \beta_{m}}{K-1} \right)
+        \right\rbrack
+        \sum_{i=1}^{N} w^{(m)}_{i} I\left(\hat{G}^{(i)} \neq G^{(i)}\right)
+    \\
+    & \Leftrightarrow 0 =
+    - \exp\left(\frac{- \beta_{m}}{K-1} \right)
+        \sum_{i=1}^{N} w^{(m)}_{i}
+    + \left\lbrack
+        \frac{1}{K-1} \exp\left(\frac{\beta_{m}}{{(K-1)}^{2}} \right)
+        + \exp\left(\frac{- \beta_{m}}{K-1} \right)
+        \right\rbrack
+        \sum_{i=1}^{N} w^{(m)}_{i} I\left(\hat{G}^{(i)} \neq G^{(i)}\right)
+    \\
+    & \Leftrightarrow 0 =
+    - \sum_{i=1}^{N} w^{(m)}_{i}
+    + \left\lbrack
+        \frac{1}{K-1} \exp\left(\frac{\beta_{m}}{{(K-1)}^{2}} + \frac{\beta_{m}}{K - 1} \right)
+        + 1
+        \right\rbrack
+        \sum_{i=1}^{N} w^{(m)}_{i} I\left(\hat{G}^{(i)} \neq G^{(i)}\right)
+    \\
+    & \Leftrightarrow
+    \frac{
+        \sum_{i=1}^{N} w^{(m)}_{i}
+    }{
+    \sum_{i=1}^{N} w^{(m)}_{i} I\left(\hat{G}^{(i)} \neq G^{(i)}\right)
+    } - 1
+    =
+    \frac{1}{K-1} \exp\left(\frac{K\beta_{m}}{{(K-1)}^{2}} \right)
+    \\
+    & \Leftrightarrow
+    \frac{1}{\text{err}_{m}} - 1
+    =
+    \frac{1}{K-1} \exp\left(\frac{K\beta_{m}}{{(K-1)}^{2}} \right)
+    \\
+    & \Leftrightarrow
+    (K - 1) \frac{1 - \text{err}_{m}}{\text{err}_{m}}
+    =
+    \exp\left(\frac{K\beta_{m}}{{(K-1)}^{2}} \right)
+    \\
+    & \Leftrightarrow
+    \log \left\lbrack(K - 1) \frac{1 - \text{err}_{m}}{\text{err}_{m}}
+    \right\rbrack
+    \frac{{(K-1)}^{2}}{K}
+    =
+    \beta_{m}
+    \\
+    & \Leftrightarrow
+    \beta_{m} =
+    \frac{{(K-1)}^{2}}{K}
+    \left\lbrack
+    \log \frac{1 - \text{err}_{m}}{\text{err}_{m}}
+    + \log (K-1)
+    \right\rbrack.
+\end{align*}
+When $k=2$, this derivation of $\beta_{m}$ is equal to the one in Section 10.4
+(Expression 10.12 in page 344). This equality indicates that the multiclass exponential
+loss reduces to the exponential loss (AdaBoost) for binary classification problems.
+
+Therefore, we have
+\begin{align*}
+    g^{(m)}(x)
+    &= g^{(m-1)}(x) + \beta_{m} f^{(m)}(x)
+    \\
+    &= g^{(m-1)}(x) +
+    \frac{{(K-1)}^{2}}{K}
+    \left\lbrack
+    \log \frac{1 - \text{err}_{m}}{\text{err}_{m}}
+    + \log (K-1)
+    \right\rbrack
+    f^{(m)}(x)
+    \\
+    &= g^{(m-1)}(x) +
+    \frac{{(K-1)}^{2}}{K}
+    \alpha_{m}
+    f^{(m)}(x)
+\end{align*}
+with $\alpha_{m} = \left\lbrack \log \frac{1 - \text{err}_{m}}{\text{err}_{m}} + \log
+(K-1) \right\rbrack$ and $\beta_{m} = \alpha_{m} \frac{(K-1)^{2}}{K}$.
+
+Then the weights for the next iteration are
+\begin{align*}
+    w^{(m+1)}_{i}
+    &= w^{(m)}_{i} \, \exp\left( - \frac{1}{K} Y^{(i)T} \beta_{m} f^{(m)} \right)
+    \\
+    &= w^{(m)}_{i}
+        \left\lbrack
+            \exp\left(\frac{- \beta_{m}}{K-1} \right)
+            +
+            \left\lbrack
+                \exp\left(\frac{\beta_{m}}{{(K-1)}^{2}} \right)
+                - \exp\left(\frac{- \beta_{m}}{K-1} \right)
+            \right\rbrack
+            I\left(\hat{G}^{(i)} \neq G^{(i)}\right)
+        \right\rbrack
+    \\
+    &= w^{(m)}_{i}
+            \exp\left(\frac{- \beta_{m}}{K-1} \right)
+        \left\lbrack
+            1
+            +
+            \left\lbrack
+            \exp\left(\frac{\beta_{m}}{{(K-1)}^{2}} + \frac{\beta_{m}}{K-1} \right)
+                - 1
+            \right\rbrack
+            I\left(\hat{G}^{(i)} \neq G^{(i)}\right)
+        \right\rbrack
+    \\
+    &= w^{(m)}_{i}
+            \exp\left(\frac{- \beta_{m}}{K-1} \right)
+        \left\lbrack
+            1
+            +
+            \left\lbrack
+            \exp\left(\frac{\alpha_{m}}{K} + \frac{\alpha_{m}(K-1)}{K} \right)
+                - 1
+            \right\rbrack
+            I\left(\hat{G}^{(i)} \neq G^{(i)}\right)
+        \right\rbrack
+    \\
+    &= w^{(m)}_{i}
+            \exp\left(\frac{- \beta_{m}}{K-1} \right)
+        \left\lbrack
+            1
+            + \left\lbrack \exp\left(\alpha_{m} \right) - 1 \right\rbrack
+            I\left(\hat{G}^{(i)} \neq G^{(i)}\right)
+        \right\rbrack
+    \\
+    &= w^{(m)}_{i}
+        \exp\left(\frac{- \beta_{m}}{K-1} \right)
+        \exp\left(\alpha_{m}\, I\left(\hat{G}^{(i)} \neq G^{(i)}\right) \right)
+\end{align*}
+which, when $K=2$, is identical to AdaBoost's weights in Section 10.4 (Equation 10.15 in
+page 344).
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 10.6}{%
+
+    \textit{McNemar test} (Agresti, 1996). We report the test error rates on the spam
+    data to be 5.5\% for a generalized additive model (GAM), and 4.5\% for gradient
+    boosting (GBM), with a test sample of size 1536.
+
+    \vspace{1em}
+
+    (a) Show that the standard error of these estimates is about 0.6\%.
+
+    \vspace{1em}
+
+    Since the same test data are used for both methods, the error rates are correlated,
+    and we cannot perform a two-sample t-test. We can compare the methods directly on
+    each test observation, leading to the summary
+
+    \begin{center}
+        \begin{tabular}{c|rr}
+            & GBM &\\
+            GAM & Correct & Error\\
+            \hline
+            Correct & 1434 & 18\\
+            Error & 33 & 51
+        \end{tabular}
+    \end{center}
+
+    The McNemar test focuses on the discordant errors, 33 vs. 18.
+
+    \vspace{1em}
+
+    (b) Conduct a test to show that GAM makes significantly more errors than gradient
+    boosting, with a two-sided p-value of 0.036.
+
+}
+
+\noindent\textbf{(a)}
+
+With the error rates and the sample size, we first calculate the variance of Binomial
+distributions. For the GAM, the variance on the number of misclassified cases is
+\begin{align*}
+    \text{Var}^{(count)}_{GAM} = 1536 \cdot (1 - 0.055) \cdot 0.055,
+\end{align*}
+thus, the variance of the
+misclassification rate is
+\begin{align*}
+    \text{Var}^{(rate)}_{GAM} = \frac{\text{Var}^{(count)}_{GAM}}{1536^2},
+\end{align*}
+and finally, the standard error is
+\begin{align*}
+    \sqrt{\text{Var}^{(rate)}_{GAM}} \approx \Sexpr{round(sqrt(1536 * (1 - 0.055) *
+    0.055 / (1536 ^ 2)), 3)}.
+\end{align*}
+The similar calculation also shows the standard error of GBM misclassification rate is
+about $\Sexpr{round(sqrt(1536 * (1 - 0.045) * 0.045 / (1536 ^ 2)), 3)}$.
+
+
+\vspace{1em}
+\noindent\textbf{(b)}
+
+The McNemar test statistics is given by
+\begin{align*}
+    \chi^{2} = \frac{{(18 - 33)}^{2}}{18 + 33} = 4.41
+\end{align*}
+which, under the null hypothesis, follows the chi-squared distribution with 1 degree of
+freedom. Then, its p-value is $\Sexpr{round(1 - pchisq(((18 - 33) ^ 2) / (18 + 33), df =
+1), 3)}$.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 10.7}{%
+
+    Derive expression (10.32).
+
+}
+
+Expression (10.32) provides the solution to the optimal constants for boosting trees.
+The optimal constants are the solution to the following minimisation (expression 10.30
+in page 357):
+\begin{align*}
+    \hat{\gamma}_{jm}
+    &= \arg \min_{\gamma_{jm}}
+        \sum_{x_{i} \in R_{jm}}
+        L\left(y_{i}, f_{m-1}(x_{i}) + \gamma_{jm}\right).
+\end{align*}
+For the two-class classification with the exponential loss, the solution is given by
+expression (10.32) in page 357:
+\begin{align*}
+    \hat{\gamma}_{jm}
+    &= \frac{1}{2} \log
+    \frac{ \sum_{x_{i} \in R_{jm}} w_{i}^{(m)} I(y_{i} = 1) }
+    { \sum_{x_{i} \in R_{jm}} w_{i}^{(m)} I(y_{i} = -1). }
+\end{align*}
+
+To derive expression (10.32), I first plug in the exponential loss function to
+expression (10.30):
+\begin{align*}
+    \hat{\gamma}_{jm}
+    &= \arg \min_{\gamma_{jm}}
+        \sum_{x_{i} \in R_{jm}}
+        L\left(y_{i}, f_{m-1}(x_{i}) + \gamma_{jm}\right)
+    \\
+    &= \arg \min_{\gamma_{jm}}
+        \sum_{x_{i} \in R_{jm}}
+        \exp\left( - y_{i} (f_{m-1}(x_{i}) + \gamma_{jm}) \right)
+    \\
+    &= \arg \min_{\gamma_{jm}}
+        \sum_{x_{i} \in R_{jm}}
+        \exp\left( - y_{i} f_{m-1}(x_{i}) \right)
+        \exp\left( - y_{i} \gamma_{jm} \right)
+    \\
+    &= \arg \min_{\gamma_{jm}}
+        \sum_{x_{i} \in R_{jm}}
+        w^{(m)}_{i}
+        \exp\left( - y_{i} \gamma_{jm} \right).
+\end{align*}
+Then,
+\begin{align*}
+    & 0 =
+        \frac{\partial}{\partial \hat{\gamma}_{jm}}
+        \sum_{x_{i} \in R_{jm}}
+        w^{(m)}_{i}
+        \exp\left( - y_{i} \hat{\gamma}_{jm} \right)
+    \\
+    & \Leftrightarrow
+    0 = \sum_{x_{i} \in R_{jm}}
+        w^{(m)}_{i} (-y_{i}) \exp\left( - y_{i} \hat{\gamma}_{jm} \right)
+    \\
+    & \Leftrightarrow
+    0 = \sum_{x_{i} \in R_{jm}}
+    \left\lbrack
+        w^{(m)}_{i} \exp\left( \hat{\gamma}_{jm} \right) I(y_{i} = -1)
+        - w^{(m)}_{i} \exp\left( - \hat{\gamma}_{jm} \right) I(y_{i} = 1)
+    \right\rbrack
+    \\
+    & \Leftrightarrow
+    0 = \sum_{x_{i} \in R_{jm}}
+    \left\lbrack
+        w^{(m)}_{i} \exp\left(2 \hat{\gamma}_{jm} \right) I(y_{i} = -1)
+        - w^{(m)}_{i} I(y_{i} = 1)
+    \right\rbrack
+    \\
+    & \Leftrightarrow
+    \exp\left(2 \hat{\gamma}_{jm} \right)
+    = \frac{
+        \sum_{x_{i} \in R_{jm}} w^{(m)}_{i} I(y_{i} = 1)
+    }{
+        \sum_{x_{i} \in R_{jm}} w^{(m)}_{i} I(y_{i} = -1)
+    }
+    \\
+    & \Leftrightarrow
+    \hat{\gamma}_{jm}
+    = \frac{1}{2} \log \frac{
+        \sum_{x_{i} \in R_{jm}} w^{(m)}_{i} I(y_{i} = 1)
+    }{
+        \sum_{x_{i} \in R_{jm}} w^{(m)}_{i} I(y_{i} = -1),
+    }
+\end{align*}
+which is expression (10.32).
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 10.8}{%
+
+    Consider a $K$-class problem where the targets $y_{ik}$ are coded as $1$ if
+    observation $i$ is in class $k$ and zero otherwise. Suppose we have a current model
+    $f_{k}(x), k = 1, \dots, K$, with $\sum_{k=1}^{K} f_{k}(x) = 0$ (see (10.21) in
+    Section 10.6). We wish to update the model for observations in a region $R$ in
+    predictor space, by adding constants $f_{k}(x) + \gamma_{k}$, with $\gamma_{K} = 0$.
+
+    \vspace{1em}
+
+    (a) Write down the multinomial log-likelihood for this problem, and its first and
+    second derivatives.
+
+    \vspace{1em}
+
+    (b) Using only the diagonal of the Hessian matrix in (1), and starting from
+    $\gamma_{k} = 0 \, \forall k$, show that a one-step approximate Newton update for
+    $\gamma_{k}$ is
+    \begin{align*}
+        \gamma^{1}_{k} = \frac{\sum_{x_{i} \in R} (y_{ik} - p_{ik})}{\sum_{x_{i} \in R}
+        p_{ik} (1 - p_{ik})},
+        \quad
+        k = 1, \dots, K-1,
+    \end{align*}
+    where $p_{ik} = \exp(f_{k}(x_{i})) / \exp(\sum_{l=1}^{K} f_{l}(x_{i}))$.
+
+    \vspace{1em}
+
+    (c) We prefer our update to sum to zero, as the current model does. Using symmetry
+    arguments, show that
+    \begin{align*}
+        \hat{\gamma}_{k} =
+            \frac{K-1}{K}
+            \left( \gamma^{1}_{k} - \frac{1}{K} \sum_{l=1}^{K} \gamma^{1}_{l} \right),
+            \quad
+            k = 1, \dots, K
+    \end{align*}
+    is an appropriate update, where $\gamma^{1}_{k}$ is defined as in (b) for all $k=1,
+    \dots, K$.
+
+}
+
+I think the definition of $p_{ik}$ above (as written in the book) is mistyped.
+In this exercise, I use the corrected definition of $p_{ij}$: $\exp(f_{k}(x_{i})) /
+\sum_{l=1}^{K} \exp(f_{l}(x_{i}))$.
+
+\vspace{1em}
+\noindent\textbf{(a)}
+
+The multinomial probability is given by
+\begin{align*}
+    p_{ik} = \frac{\exp(f_{k}(x_{i}))}{\sum_{l=1}^{K} \exp\left(f_{l}(x_{i})\right)}.
+\end{align*}
+Then, the log-likelihood is
+\begin{align*}
+    LL(y, f)
+    &= \sum_{x_{i} \in R} \sum_{k=1}^{K}
+        y_{ik} \log(p_{ik})
+    \\
+    &= \sum_{x_{i} \in R}
+        \left\lbrack
+        \sum_{k=1}^{K} y_{ik} f_{k}(x_{i})
+        -
+        \log\left(\sum_{l=1}^{K} \exp(f_{l}(x_{i}))\right)
+    \right\rbrack.
+\end{align*}
+Its first derivative is
+\begin{align*}
+    \frac{\partial}{\partial f_{k}} LL(y, f)
+    = \sum_{x_{i} \in R}
+        \left\lbrack
+            y_{ik}
+            -
+            \frac{\exp(f_{k}(x_{i}))}{\sum_{l=1}^{K} \exp(f_{l}(x_{i}))}
+        \right\rbrack
+    = \sum_{x_{i} \in R}
+        \left( y_{ik} - p_{ik} \right),
+\end{align*}
+and the second derivative (the diagonal of Hessian matrix) is
+\begin{align*}
+    \frac{\partial^{2}}{\partial f_{k} \partial f_{k}} LL(y, f)
+    &= - \sum_{x_{i} \in R}
+    \left\lbrack
+        \frac{\exp(f_{k}(x_{i}))}{\sum_{l=1}^{K} \exp(f_{l}(x_{i}))}
+        -
+        {\left(
+            \frac{\exp(f_{k}(x_{i}))}{\sum_{l=1}^{K} \exp(f_{l}(x_{i}))}
+        \right)}^{2}
+    \right\rbrack
+    \\
+    &= - \sum_{x_{i} \in R}
+    \left\lbrack p_{ik} - p_{ik}^{2} \right\rbrack
+    = - \sum_{x_{i} \in R} p_{ik} (1  - p_{ik}).
+\end{align*}
+
+\vspace{1em}
+\noindent\textbf{(b)}
+
+The Newton update is given by
+\begin{align*}
+    f^{new}
+    = f
+        - {\left( \frac{\partial^{2} LL(y, f)}{\partial f \partial f^{T}} \right)}^{-1}
+        \frac{\partial LL(y, f)}{\partial f}.
+\end{align*}
+When we use only the diagonal of the Hessian matrix, this update simplifies to
+\begin{align*}
+    f_{k}^{new}
+    &= f_{k}
+        - {\left( \frac{\partial^{2} LL(y, f)}{\partial f_{k} \partial f_{k}} \right)}^{-1}
+        \frac{\partial LL(y, f)}{\partial f_{k}}
+    \\
+    &= f_{k}
+        + \frac{
+            \sum_{x_{i} \in R} \left( y_{ik} - p_{ik} \right)
+        }{
+            \sum_{x_{i} \in R} p_{ik} (1  - p_{ik}).
+        }
+\end{align*}
+Therefore,
+\begin{align*}
+    \gamma^{1}_{k} = \frac{\sum_{x_{i} \in R} (y_{ik} - p_{ik})}{\sum_{x_{i} \in R}
+    p_{ik} (1 - p_{ik})},
+    \quad
+    k = 1, \dots, K-1.
+\end{align*}
+
+
+\vspace{1em}
+\noindent\textbf{(c)}
+
+Note that the adding an arbitrary constant $a$ to $\gamma$ leaves the model
+unchanged:
+\begin{align*}
+    p_{ik}
+    = \frac{
+        \exp(f_{k}(x_{i}) + \gamma^{1}_{k})
+    }{
+        \sum_{l=1}^{K} \exp\left(f_{l}(x_{i}) + \gamma^{1}_{l} \right)
+    }
+    = \frac{
+        \exp(f_{k}(x_{i}) + \gamma^{1}_{k} + a)
+    }{
+        \sum_{l=1}^{K} \exp\left(f_{l}(x_{i}) + \gamma^{1}_{l} + a \right)
+    }.
+\end{align*}
+Thus, we can express the updates that sum to zero, $\tilde{\gamma}$, as follows:
+\begin{align*}
+    \tilde{\gamma}_{k} = \gamma^{1}_{k} + a
+    \quad \text{and} \quad
+    \sum_{l=1}^{K} \tilde{\gamma}_{k} = 0.
+\end{align*}
+Then we have
+\begin{align*}
+    \tilde{\gamma}_{k} = \gamma^{1}_{k} - \frac{1}{K} \sum_{l=1}^{K} \gamma^{1}_{l}.
+\end{align*}
+
+Now, recall that $\gamma^{0}_{k} = 0 \, \forall k$ and that the updates are defined only
+for $k=1,\dots,K-1$. Thus,
+\begin{align*}
+    \tilde{\gamma}_{K}
+    = - \frac{1}{K} \sum_{l=1}^{K} \gamma^{1}_{l}
+    = - \frac{1}{K} \sum_{l=1}^{K-1} \gamma^{1}_{l}.
+\end{align*}
+This calculation is not the same for the other non-base classes, and this choice of base
+class is arbitrary: we could use class $m (\neq K)$ as the base.  Thus to retain the
+symmetry, we take the average of $\tilde{\gamma}_{k}$ for all the $K$ possible base
+classes.  Letting $m$ index the base class and $\gamma^{1}_{K}$ be defined just as for
+$k=1,\dots$ in (b), we have
+\begin{align*}
+    \hat{\gamma}_{k}
+    = \frac{1}{K} \sum_{m=1}^{K}
+        \left\lbrack
+        I(k \neq m) \gamma^{1}_{k}
+        - \frac{1}{K} \sum_{l=1}^{K} I(l \neq m) \gamma^{1}_{l}
+        \right\rbrack
+    = \frac{K-1}{K}
+        \left( \gamma^{1}_{k} - \frac{1}{K} \sum_{l=1}^{K} \gamma^{1}_{l} \right).
+\end{align*}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 10.9}{%
+
+    Consider a $K$-class problem where the targets $y_{ik}$ are coded as $1$ if
+    observation $i$ is in class $k$ and zero otherwise. Using the multinomial deviance
+    loss function (10.22) and the symmetric logistic transform, use the arguments
+    leading to the gradient boosting Algorithm 10.3 to derive Algorithm 10.4.
+
+}
+
+Algorithm 10.3 lists the gradient boosting algorithm for a regression tree, and
+algorithm 10.4 shows the gradient boosting algorithm for a $K$-class classification
+tree. Here I focus on the calculation of updates (step 2(b)iii).
+
+Following Ex.\ 10.8, I assume that the targets $y_{ik}$ are coded as $1$ if observation
+$i$ is in class $k$ and zero otherwise. Also
+\begin{align*}
+    p_{k}(x) = \frac{\exp(f_{k}(x))}{\sum_{l=1}^{K} \exp(f_{l}(x))}, \quad k = 1, \dots,
+    K.
+\end{align*}
+
+While we considered the maximisation of log-likelihood in Ex.\ 10.8, the gradient
+boosting algorithm concerns the minimisation of deviance loss function:
+\begin{align*}
+    L(y, f(x))
+    = - LL(y, f(x))
+    = - \sum_{x_{i} \in R} \sum_{k=1}^{K} y_{ik} \log(p_{ik}).
+\end{align*}
+The similar derivation to the one in Ex.\ 10.8(a) gives us the first derivative
+\begin{align*}
+    - \frac{\partial L(y, f(x))}{\partial f_{k}(x)}
+    = \sum_{x_{i} \in R} \left( y_{ik} - p_{ik} \right),
+\end{align*}
+and the second derivative
+\begin{align*}
+    - \frac{\partial^{2} L(y, f(x))}{\partial f_{k}(x) \partial f_{k}(x)}
+    = \sum_{x_{i} \in R} p_{ik}(1 - p_{ik}).
+\end{align*}
+Then, the updates are given by
+\begin{align*}
+    \tilde{f}_{km}(x)
+    &= f_{k,m-1}(x)
+        + {\left( \frac{\partial^{2} L(y, f(x))}{\partial f_{k}(x) \partial f_{k}(x)} \right)}^{-1}
+        \frac{\partial L(y, f(x))}{\partial f_{k}}
+    \\
+    &= f_{k,m-1}(x)
+        + \frac{\sum_{x_{i} \in R} \left( y_{ik} - p_{ik} \right)}
+        {\sum_{x_{i} \in R} p_{ik}(1 - p_{ik})}.
+\end{align*}
+As discussed in Ex.\ 10.8, an arbitrary constant can be added to this updates, without
+affecting the model. Thus we will force the updates of the base class to be zero.  As
+in Ex.\ 10.8, the choice of base class is arbitrary, and we take the average of updates
+across all possible base classes. Then we obtain
+\begin{align*}
+    {f}_{km}(x)
+    &= f_{k,m-1}(x)
+        +
+        \frac{K-1}{K}
+        \frac{\sum_{x_{i} \in R} \left( y_{ik} - p_{ik} \right)}
+        {\sum_{x_{i} \in R} p_{ik}(1 - p_{ik})}.
+\end{align*}
+
+To highlight the equivalence to Algorithm 10.4, I reparameterise the above updates.
+First, I define
+\begin{align*}
+    r_{ik} = y_{ik} - p_{ik} =
+    \begin{cases}
+        1 - p_{ik} > 0 & \text{if } y_{ik} = 1\\
+        - p_{ik} < 0 & \text{if } y_{ik} = 0.
+    \end{cases}
+\end{align*}
+Then,
+\begin{align*}
+    p_{ik} = y_{ik} - r_{ik} =
+    \begin{cases}
+        1 - r_{ik} & \text{if } y_{ik} = 1\\
+        - r_{ik} & \text{if } y_{ik} = 0,
+    \end{cases}
+\end{align*}
+and thus,
+\begin{align*}
+    p_{ik} (1 - p_{ik})
+    &=
+    \begin{cases}
+        (1 - r_{ik}) r_{ik} & \text{if } y_{ik} = 1\\
+        - r_{ik} (1 + r_{ik}) & \text{if } y_{ik} = 0
+    \end{cases}
+    \\
+    &=
+    \vert r_{ik} \vert (1 - \vert r_{ik} \vert),
+\end{align*}
+because when $y_{ik} = 1$, $r_{ik} > 0$, and when $y_{ik} = 0$, $r_{ik} < 0$.
+Therefore,
+\begin{align*}
+    f_{km}(x)
+    &= f_{k,m-1}(x)
+        + \frac{K-1}{K}
+        \frac{\sum_{x_{i} \in R} \left( y_{ik} - p_{ik} \right)}
+        {\sum_{x_{i} \in R} p_{ik}(1 - p_{ik})}
+    \\
+    &= f_{k,m-1}(x)
+        + \frac{K-1}{K}
+        \frac{\sum_{x_{i} \in R} r_{ik}}
+        {\sum_{x_{i} \in R} \vert r_{ik} \vert (1 - \vert r_{ik} \vert)}
+\end{align*}
+which is the updates as listed in Algorithm 10.4.
+
+Note that this update calculation is identical to the one for Ex.\ 10.8. The major
+difference between the two algorithms is in what I did not discuss: how the model is
+trained to obtain regions $R$. Ex.\ 10.8 does not mention a model, but in Ex.\ 10.9 (the
+gradient boosting algorithm), a regression tree is fit to the residuals ($r_{ik}$) to
+give regions $R$.  In the AdaBoost algorithm in constrast, a regression tree is fit to
+the weighted error.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 10.10}{%
+
+    Show that for $K = 2$ class classification, only one tree needs to be grown at each
+    gradient-boosting iteration.
+
+}
+
+At each iteration of the gradient boosting, regression trees are fit to the residuals.
+For $K$ class classifications, we have $K$ sets of residuals, each of which is fit by
+a regression tree, resulting in $K$ trees.
+
+For $K=2$ class classification, however, we have
+\begin{align*}
+    r_{i1} = I(y_{i} = \mathcal{G}_{1}) - p_{i1}
+    \quad \text{and} \quad
+    r_{i2} = I(y_{i} = \mathcal{G}_{2}) - p_{i2}.
+\end{align*}
+Note that $y \in \{\mathcal{G}_{1}, \mathcal{G}_{2}\}$ and that  $p_{i1} + p_{i2} = 1$.
+Thus,
+\begin{align*}
+    r_{i2}
+    &= (1 - I(y_{i} = \mathcal{G}_{1})) - (1 - p_{i1})
+    \\
+    &= - (I(y_{i} = \mathcal{G}_{1}) - p_{i1})
+    \\
+    &= - r_{i1}.
+\end{align*}
+Thus, fitting a tree to $r_{i1}$ is equivalent to fitting a tree to $r_{i2}$: The
+regions given by $r_{i1}$ tree are identical to the regions given by $r_{i2}$.
+Therefore, only one tree needs to be fit.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \exercise{Ex. 10.11}{%
+%
+%     Show how to compute the partial dependence function $f_{S}(X_{S})$ in (10.47)
+%     efficiently.
+%
+% }
+%
+% Expression (10.47) is
+% \begin{align*}
+%     f_{S}(X_{S}) = \mathbb{E}_{X_{C}} f(X_{S}, X_{C}).
+% \end{align*}
+% Here, $X_{S}$ is a subvector of $X^{T}=(X_{1}, X_{2}, \dots, X_{p})$, indexed by $S
+% \subset \{1, 2, \dots, p\}$, and $C$ is the complement set: $S \cup C = \{1, 2, \dots,
+% p\}$.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\exercise{Ex. 10.12}{%
+
+    Referring to (10.49), let $S = \{1\}$ and $C = \{2\}$, with $f(X_{1}, X_{2}) =
+    X_{1}$. Assume $X_{1}$ and $X_{2}$ are bivariate Gaussian, each with mean zero,
+    variance one, and $\mathbb{E}(X_{1} X_{2}) = \rho$. Show that $\mathbb{E}(f(X_{1},
+    X_{2}) \vert X_{2} ) = \rho X_{2}$, even though $f$ is not a function of $X_{2}$.
+
+}
+
+From the description,
+\begin{align*}
+    \mathbb{E}(f(X_{1}, X_{2}) \vert X_{2})
+    &= \mathbb{E}(X_{1} \vert X_{2}).
+\end{align*}
+
+Let $f_{X_{1}}$, $f_{X_{2}}$, $f_{X_{1},X_{2}}$, and $f_{X_{1} \vert X_{2}}$ represent
+the probability density functions. Given $f_{X_{1}}$ and $f_{X_{2}}$ are standard
+normal, the conditional density function is
+\begin{align*}
+    &f_{X_{1} \vert X_{2}}(x_{1}, x_{2})
+    \\
+    &=
+    \frac{f_{X_{1},X_{2}}(x_{1}, x_{2})}{f_{X_{2}}(x_{2})}
+    \\
+    &=
+    \frac{1}{2 \pi \sqrt{1 - \rho^{2}}}
+        \exp\left(
+            \frac{-(x_{1}^{2} + x_{2}^{2} - 2 \rho x_{1} x_{2})}{2(1-\rho^{2})}
+        \right)
+    {\left\lbrack
+        \frac{1}{\sqrt{2\pi}} \exp\left( \frac{- x_{2}^{2}}{2} \right)
+    \right\rbrack}^{-1}
+    \\
+    &=
+    \frac{1}{\sqrt{2 \pi (1 - \rho^{2})}}
+        \exp\left(
+            \frac{-(x_{1}^{2} + x_{2}^{2} - 2 \rho x_{1} x_{2})}{2(1-\rho^{2})}
+            - \frac{- x_{2}^{2}}{2}
+        \right)
+    \\
+    &=
+    \frac{1}{\sqrt{2 \pi (1 - \rho^{2})}}
+        \exp\left(
+            \frac{-1}{2} \frac{{(x_{1} - \rho x_{2})}^{2}}{1 - \rho^{2}}
+            \right).
+\end{align*}
+Thus, the conditional density function is of Gaussian distribution with mean $\rho
+x_{2}$ and variance $1 - \rho^{2}$. Therefore,
+\begin{align*}
+    \mathbb{E}(X_{1} \vert X_{2}) = \rho X_{2}.
+\end{align*}

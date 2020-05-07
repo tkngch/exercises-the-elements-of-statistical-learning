@@ -12,6 +12,7 @@
 \usepackage{listings}  % lstlisting
 \usepackage{placeins}  % FloatBarrier
 \usepackage{dsfont}  % mathds for indicator function
+\usepackage[bottom]{footmisc}  % fix the footnote at the bottom of page
 \lstset{language=R, basicstyle=\small\ttfamily}
 
 \usepackage{color}
@@ -62,6 +63,7 @@ suppressMessages(library(ggplot2))
 suppressMessages(library(mvtnorm))
 suppressMessages(library(glmnet))
 suppressMessages(library(doMC))  # parallel computation for glmnet
+suppressMessages(library(gbm))
 registerDoMC(cores=4)
 @
 
@@ -80,6 +82,10 @@ registerDoMC(cores=4)
 \clearpage
 
 <<chapter_07, child='chapter_07.Rnw'>>=
+@
+\clearpage
+
+<<chapter_10, child='chapter_10.Rnw'>>=
 @
 \clearpage
 
